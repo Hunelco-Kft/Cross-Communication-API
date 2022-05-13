@@ -1,0 +1,66 @@
+group 'com.hunelco.cross_com_api'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '1.6.10'
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:4.1.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    compileSdkVersion 31
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        minSdkVersion 21
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation "androidx.core:core-ktx:+"
+
+    // Timber
+    implementation 'com.jakewharton.timber:timber:5.0.1'
+
+    // Nearby
+    api 'com.google.android.gms:play-services-nearby:18.1.0'
+
+    // Location Services
+    implementation 'com.google.android.gms:play-services-location:19.0.1'
+
+    // Gson
+    implementation 'com.google.code.gson:gson:2.8.6'
+
+    // Nordic Semiconductor BLE
+    implementation 'no.nordicsemi.android:ble-ktx:2.4.0'
+}
