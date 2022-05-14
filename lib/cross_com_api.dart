@@ -13,11 +13,12 @@ abstract class BaseApi {
 // It only works on Android Server Side!
 class CrossComServerApi extends BaseApi {
   final ServerApi _api = ServerApi(binaryMessenger: BaseApi._channel.binaryMessenger);
+  final AdvertiseApi _advertiseApi = AdvertiseApi(binaryMessenger: BaseApi._channel.binaryMessenger);
   final CommunicationApi _commApi = CommunicationApi(binaryMessenger: BaseApi._channel.binaryMessenger);
 
   Future<void> startServer(
       {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) {
-    final config = ServerConfig(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
+    final config = Config(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
     return _api.startServer(config);
   }
 
@@ -26,11 +27,11 @@ class CrossComServerApi extends BaseApi {
   }
 
   Future<void> startAdvertise() {
-    return _commApi.startAdvertise();
+    return _advertiseApi.startAdvertise();
   }
 
   Future<void> stopAdvertise() {
-    return _commApi.stopAdvertise();
+    return _advertiseApi.stopAdvertise();
   }
 
   Future<void> sendMessage(String toDeviceId, String endpoint, String payload) {
@@ -42,68 +43,96 @@ class CrossComServerApi extends BaseApi {
   }
 }
 
-class CrossComClientApi extends BaseApi with CommunicationCallbackApi {
-   final characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
-   final serviceUuid = Guid("00001111-0000-1000-8000-00805F9B34FB");
+class CrossComClientApi extends BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, StateCallbackApi {
+  final characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
+  final serviceUuid = Guid("00001111-0000-1000-8000-00805F9B34FB");
 
-   final FlutterBluePlus _flutterBlue = FlutterBluePlus.instance;
-   final ClientApi _clientApi = ClientApi(binaryMessenger: BaseApi._channel.binaryMessenger);
+  final FlutterBluePlus _flutterBlue = FlutterBluePlus.instance;
 
-   StreamSubscription<List<ScanResult>>? _subscription;
-   Map<String, ConnectedDevice> _devices = {};
+  final ServerApi _api = ServerApi(binaryMessenger: BaseApi._channel.binaryMessenger);
+  final ConnectionApi _connectionApi = ConnectionApi(binaryMessenger: BaseApi._channel.binaryMessenger);
+  final DiscoveryApi _discoveryApi = DiscoveryApi(binaryMessenger: BaseApi._channel.binaryMessenger);
+  final CommunicationApi _communicationApi = CommunicationApi(binaryMessenger: BaseApi._channel.binaryMessenger);
 
-   List<BluetoothService>? _services;
-  
-   BluetoothCharacteristic? _generalCharacteristic;
+  StreamSubscription<List<ScanResult>>? _subscription;
+  Map<String, ConnectedDevice> _devices = {};
+
+  List<BluetoothService>? _services;
+
+  BluetoothCharacteristic? _generalCharacteristic;
 
   constructor() {
+    ConnectionCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
     CommunicationCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
+    StateCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
   }
 
-
-   Future<void> startDiscovery({int timeoutInSeconds = 10000000}) async {
-    _devices.clear();
-
-    if (Platform.isAndroid) {
-      await _clientApi.startDiscovery();
-    } else {
-      await _flutterBlue.startScan(
-          scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [serviceUuid], timeout: Duration(seconds: timeoutInSeconds));
-      _subscription = _flutterBlue.scanResults.listen((results) { 
-        for (ScanResult r in results) {
-          _devices[r.device.id.id] = ConnectedDevice(deviceId: r.device.id.id, provider: Provider.gatt);
-
-          // TODO: Stream adatfolyam behívása
-        }
-      });
-    }
+  Future<void> startServer(
+      {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) {
+    final config = Config(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
+    return _api.startServer(config);
   }
 
-   Future<void> stopDiscovery() async {
-    if (Platform.isAndroid) {
-      _subscription?.cancel();
-      await _clientApi.stopDiscovery();
-    } else {
-      await _flutterBlue.stopScan();
-    }
+  Future<void> stopServer() {
+    return _api.stopServer();
   }
 
-   Future<void> connectToDevice(String connectToDeviceid) async {
-    
+  Future<void> startDiscovery({int timeoutInSeconds = 10000000}) async {
+    // _devices.clear();
+
+    // if (Platform.isAndroid) {
+    //   await _discoveryApi.startDiscovery();
+    // } else {
+    //   await _flutterBlue.startScan(
+    //       scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [serviceUuid], timeout: Duration(seconds: timeoutInSeconds));
+    //   _subscription = _flutterBlue.scanResults.listen((results) {
+    //     for (ScanResult r in results) {
+    //       _devices[r.device.id.id] = ConnectedDevice(deviceId: r.device.id.id, provider: Provider.gatt);
+    //       // TODO: Stream adatfolyam behívása
+    //     }
+    //   });
+    // }
   }
 
-   Future<void> disconnectFromDevice(String id) async {
-
+  Future<void> stopDiscovery() async {
+    // if (Platform.isAndroid) {
+    //   _subscription?.cancel();
+    //   await _discoveryApi.stopDiscovery();
+    // } else {
+    //   await _flutterBlue.stopScan();
+    // }
   }
 
-   Future<void> sendMessage(String endpoint, String data) async {
-    MessagePayload(endpoint: endpoint, data: data)
-    await _generalCharacteristic?.write(jsonEncode(MessagePayload(deviceId: )))
+  Future<void> connectToDevice(String connectToDeviceid) async {
+    // if (Platform.isAndroid) {
+    //   await _connectionApi.connect(connectToDeviceid, "DEVICE");
+    // } else {
+    //   await _flutterBlue.stopScan();
+    // }
+  }
+
+  Future<void> disconnectFromDevice(String id) async {
+    //  if (Platform.isAndroid) {
+    //   await _connectionApi.disconnect(id);
+    // } else {
+    //   await _flutterBlue.stopScan();
+    // }
+  }
+
+  Future<void> sendMessage(String endpoint, String data) async {
+    // MessagePayload(endpoint: endpoint, data: data)
+    // await _generalCharacteristic?.write(jsonEncode(MessagePayload(deviceId: )))
+  }
+
+  @override
+  void onBluetoothStateChanged(StateResponse state) {
+    // TODO: implement onBluetoothStateChanged
   }
 
   @override
   bool onDeviceConnected(ConnectedDevice device) {
-    _devices[device.deviceId!] = device;
+    // TODO: implement onDeviceConnected
+    throw UnimplementedError();
   }
 
   @override
@@ -117,7 +146,12 @@ class CrossComClientApi extends BaseApi with CommunicationCallbackApi {
   }
 
   @override
-  void onRawMessageReceived(String msg) {
+  void onRawMessageReceived(String deviceId, String msg) {
     // TODO: implement onRawMessageReceived
+  }
+
+  @override
+  void onWifiStateChanged(StateResponse state) {
+    // TODO: implement onWifiStateChanged
   }
 }

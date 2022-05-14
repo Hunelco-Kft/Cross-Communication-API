@@ -20,5 +20,10 @@ public final class GeneratedPluginRegistrant {
     } catch(Exception e) {
       Log.e(TAG, "Error registering plugin cross_com_api, com.hunelco.cross_com_api.CrossComApiPlugin", e);
     }
+    try {
+      flutterEngine.getPlugins().add(new com.hunelco.cross_com_api.CrossComClientPlugin());
+    } catch(Exception e) {
+      Log.e(TAG, "Error registering plugin cross_com_client, com.hunelco.cross_com_api.CrossComClientPlugin", e);
+    }
   }
 }

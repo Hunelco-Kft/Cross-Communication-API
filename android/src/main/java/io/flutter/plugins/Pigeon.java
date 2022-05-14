@@ -55,7 +55,7 @@ public class Pigeon {
   }
 
   /** Generated class from Pigeon that represents data sent in messages. */
-  public static class ServerConfig {
+  public static class Config {
     private @Nullable String name;
     public @Nullable String getName() { return name; }
     public void setName(@Nullable String setterArg) {
@@ -90,8 +90,8 @@ public class Pigeon {
         this.allowMultipleVerifiedDevice = setterArg;
         return this;
       }
-      public @NonNull ServerConfig build() {
-        ServerConfig pigeonReturn = new ServerConfig();
+      public @NonNull Config build() {
+        Config pigeonReturn = new Config();
         pigeonReturn.setName(name);
         pigeonReturn.setStrategy(strategy);
         pigeonReturn.setAllowMultipleVerifiedDevice(allowMultipleVerifiedDevice);
@@ -105,8 +105,8 @@ public class Pigeon {
       toMapResult.put("allowMultipleVerifiedDevice", allowMultipleVerifiedDevice);
       return toMapResult;
     }
-    static @NonNull ServerConfig fromMap(@NonNull Map<String, Object> map) {
-      ServerConfig pigeonResult = new ServerConfig();
+    static @NonNull Config fromMap(@NonNull Map<String, Object> map) {
+      Config pigeonResult = new Config();
       Object name = map.get("name");
       pigeonResult.setName((String)name);
       Object strategy = map.get("strategy");
@@ -287,7 +287,7 @@ public class Pigeon {
     protected Object readValueOfType(byte type, ByteBuffer buffer) {
       switch (type) {
         case (byte)128:         
-          return ServerConfig.fromMap((Map<String, Object>) readValue(buffer));
+          return Config.fromMap((Map<String, Object>) readValue(buffer));
         
         default:        
           return super.readValueOfType(type, buffer);
@@ -296,9 +296,9 @@ public class Pigeon {
     }
     @Override
     protected void writeValue(ByteArrayOutputStream stream, Object value)     {
-      if (value instanceof ServerConfig) {
+      if (value instanceof Config) {
         stream.write(128);
-        writeValue(stream, ((ServerConfig) value).toMap());
+        writeValue(stream, ((Config) value).toMap());
       } else 
 {
         super.writeValue(stream, value);
@@ -308,7 +308,7 @@ public class Pigeon {
 
   /** Generated interface from Pigeon that represents a handler of messages from Flutter.*/
   public interface ServerApi {
-    @NonNull void startServer(ServerConfig config);
+    @NonNull void startServer(Config config);
     @NonNull void stopServer();
 
     /** The codec used by ServerApi. */
@@ -326,7 +326,7 @@ public class Pigeon {
             Map<String, Object> wrapped = new HashMap<>();
             try {
               ArrayList<Object> args = (ArrayList<Object>)message;
-              ServerConfig configArg = (ServerConfig)args.get(0);
+              Config configArg = (Config)args.get(0);
               if (configArg == null) {
                 throw new NullPointerException("configArg unexpectedly null.");
               }
@@ -363,37 +363,77 @@ public class Pigeon {
       }
     }
   }
-  private static class ClientApiCodec extends StandardMessageCodec {
-    public static final ClientApiCodec INSTANCE = new ClientApiCodec();
-    private ClientApiCodec() {}
+  private static class ConnectionApiCodec extends StandardMessageCodec {
+    public static final ConnectionApiCodec INSTANCE = new ConnectionApiCodec();
+    private ConnectionApiCodec() {}
+    @Override
+    protected Object readValueOfType(byte type, ByteBuffer buffer) {
+      switch (type) {
+        case (byte)128:         
+          return ConnectedDevice.fromMap((Map<String, Object>) readValue(buffer));
+        
+        default:        
+          return super.readValueOfType(type, buffer);
+        
+      }
+    }
+    @Override
+    protected void writeValue(ByteArrayOutputStream stream, Object value)     {
+      if (value instanceof ConnectedDevice) {
+        stream.write(128);
+        writeValue(stream, ((ConnectedDevice) value).toMap());
+      } else 
+{
+        super.writeValue(stream, value);
+      }
+    }
   }
 
   /** Generated interface from Pigeon that represents a handler of messages from Flutter.*/
-  public interface ClientApi {
-    @NonNull void startDiscovery();
-    @NonNull void stopDiscovery();
+  public interface ConnectionApi {
+    void connect(String endpointId, String displayName, Result<ConnectedDevice> result);
+    void disconnect(String id, Result<Void> result);
 
-    /** The codec used by ClientApi. */
+    /** The codec used by ConnectionApi. */
     static MessageCodec<Object> getCodec() {
-      return ClientApiCodec.INSTANCE;
+      return ConnectionApiCodec.INSTANCE;
     }
 
-    /** Sets up an instance of `ClientApi` to handle messages through the `binaryMessenger`. */
-    static void setup(BinaryMessenger binaryMessenger, ClientApi api) {
+    /** Sets up an instance of `ConnectionApi` to handle messages through the `binaryMessenger`. */
+    static void setup(BinaryMessenger binaryMessenger, ConnectionApi api) {
       {
         BasicMessageChannel<Object> channel =
-            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ClientApi.startDiscovery", getCodec());
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ConnectionApi.connect", getCodec());
         if (api != null) {
           channel.setMessageHandler((message, reply) -> {
             Map<String, Object> wrapped = new HashMap<>();
             try {
-              api.startDiscovery();
-              wrapped.put("result", null);
+              ArrayList<Object> args = (ArrayList<Object>)message;
+              String endpointIdArg = (String)args.get(0);
+              if (endpointIdArg == null) {
+                throw new NullPointerException("endpointIdArg unexpectedly null.");
+              }
+              String displayNameArg = (String)args.get(1);
+              if (displayNameArg == null) {
+                throw new NullPointerException("displayNameArg unexpectedly null.");
+              }
+              Result<ConnectedDevice> resultCallback = new Result<ConnectedDevice>() {
+                public void success(ConnectedDevice result) {
+                  wrapped.put("result", result);
+                  reply.reply(wrapped);
+                }
+                public void error(Throwable error) {
+                  wrapped.put("error", wrapError(error));
+                  reply.reply(wrapped);
+                }
+              };
+
+              api.connect(endpointIdArg, displayNameArg, resultCallback);
             }
             catch (Error | RuntimeException exception) {
               wrapped.put("error", wrapError(exception));
+              reply.reply(wrapped);
             }
-            reply.reply(wrapped);
           });
         } else {
           channel.setMessageHandler(null);
@@ -401,18 +441,33 @@ public class Pigeon {
       }
       {
         BasicMessageChannel<Object> channel =
-            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ClientApi.stopDiscovery", getCodec());
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ConnectionApi.disconnect", getCodec());
         if (api != null) {
           channel.setMessageHandler((message, reply) -> {
             Map<String, Object> wrapped = new HashMap<>();
             try {
-              api.stopDiscovery();
-              wrapped.put("result", null);
+              ArrayList<Object> args = (ArrayList<Object>)message;
+              String idArg = (String)args.get(0);
+              if (idArg == null) {
+                throw new NullPointerException("idArg unexpectedly null.");
+              }
+              Result<Void> resultCallback = new Result<Void>() {
+                public void success(Void result) {
+                  wrapped.put("result", null);
+                  reply.reply(wrapped);
+                }
+                public void error(Throwable error) {
+                  wrapped.put("error", wrapError(error));
+                  reply.reply(wrapped);
+                }
+              };
+
+              api.disconnect(idArg, resultCallback);
             }
             catch (Error | RuntimeException exception) {
               wrapped.put("error", wrapError(exception));
+              reply.reply(wrapped);
             }
-            reply.reply(wrapped);
           });
         } else {
           channel.setMessageHandler(null);
@@ -420,28 +475,159 @@ public class Pigeon {
       }
     }
   }
-  private static class CommunicationApiCodec extends StandardMessageCodec {
-    public static final CommunicationApiCodec INSTANCE = new CommunicationApiCodec();
-    private CommunicationApiCodec() {}
+  private static class ConnectionCallbackApiCodec extends StandardMessageCodec {
+    public static final ConnectionCallbackApiCodec INSTANCE = new ConnectionCallbackApiCodec();
+    private ConnectionCallbackApiCodec() {}
+    @Override
+    protected Object readValueOfType(byte type, ByteBuffer buffer) {
+      switch (type) {
+        case (byte)128:         
+          return ConnectedDevice.fromMap((Map<String, Object>) readValue(buffer));
+        
+        default:        
+          return super.readValueOfType(type, buffer);
+        
+      }
+    }
+    @Override
+    protected void writeValue(ByteArrayOutputStream stream, Object value)     {
+      if (value instanceof ConnectedDevice) {
+        stream.write(128);
+        writeValue(stream, ((ConnectedDevice) value).toMap());
+      } else 
+{
+        super.writeValue(stream, value);
+      }
+    }
+  }
+
+  /** Generated class from Pigeon that represents Flutter messages that can be called from Java.*/
+  public static class ConnectionCallbackApi {
+    private final BinaryMessenger binaryMessenger;
+    public ConnectionCallbackApi(BinaryMessenger argBinaryMessenger){
+      this.binaryMessenger = argBinaryMessenger;
+    }
+    public interface Reply<T> {
+      void reply(T reply);
+    }
+    static MessageCodec<Object> getCodec() {
+      return ConnectionCallbackApiCodec.INSTANCE;
+    }
+
+    public void onDeviceConnected(ConnectedDevice deviceArg, Reply<Boolean> callback) {
+      BasicMessageChannel<Object> channel =
+          new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ConnectionCallbackApi.onDeviceConnected", getCodec());
+      channel.send(new ArrayList<Object>(Arrays.asList(deviceArg)), channelReply -> {
+        @SuppressWarnings("ConstantConditions")
+        Boolean output = (Boolean)channelReply;
+        callback.reply(output);
+      });
+    }
+    public void onDeviceDisconnected(ConnectedDevice deviceArg, Reply<Void> callback) {
+      BasicMessageChannel<Object> channel =
+          new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ConnectionCallbackApi.onDeviceDisconnected", getCodec());
+      channel.send(new ArrayList<Object>(Arrays.asList(deviceArg)), channelReply -> {
+        callback.reply(null);
+      });
+    }
+  }
+  private static class DiscoveryApiCodec extends StandardMessageCodec {
+    public static final DiscoveryApiCodec INSTANCE = new DiscoveryApiCodec();
+    private DiscoveryApiCodec() {}
   }
 
   /** Generated interface from Pigeon that represents a handler of messages from Flutter.*/
-  public interface CommunicationApi {
+  public interface DiscoveryApi {
+    void startDiscovery(Result<Void> result);
+    void stopDiscovery(Result<Void> result);
+
+    /** The codec used by DiscoveryApi. */
+    static MessageCodec<Object> getCodec() {
+      return DiscoveryApiCodec.INSTANCE;
+    }
+
+    /** Sets up an instance of `DiscoveryApi` to handle messages through the `binaryMessenger`. */
+    static void setup(BinaryMessenger binaryMessenger, DiscoveryApi api) {
+      {
+        BasicMessageChannel<Object> channel =
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.DiscoveryApi.startDiscovery", getCodec());
+        if (api != null) {
+          channel.setMessageHandler((message, reply) -> {
+            Map<String, Object> wrapped = new HashMap<>();
+            try {
+              Result<Void> resultCallback = new Result<Void>() {
+                public void success(Void result) {
+                  wrapped.put("result", null);
+                  reply.reply(wrapped);
+                }
+                public void error(Throwable error) {
+                  wrapped.put("error", wrapError(error));
+                  reply.reply(wrapped);
+                }
+              };
+
+              api.startDiscovery(resultCallback);
+            }
+            catch (Error | RuntimeException exception) {
+              wrapped.put("error", wrapError(exception));
+              reply.reply(wrapped);
+            }
+          });
+        } else {
+          channel.setMessageHandler(null);
+        }
+      }
+      {
+        BasicMessageChannel<Object> channel =
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.DiscoveryApi.stopDiscovery", getCodec());
+        if (api != null) {
+          channel.setMessageHandler((message, reply) -> {
+            Map<String, Object> wrapped = new HashMap<>();
+            try {
+              Result<Void> resultCallback = new Result<Void>() {
+                public void success(Void result) {
+                  wrapped.put("result", null);
+                  reply.reply(wrapped);
+                }
+                public void error(Throwable error) {
+                  wrapped.put("error", wrapError(error));
+                  reply.reply(wrapped);
+                }
+              };
+
+              api.stopDiscovery(resultCallback);
+            }
+            catch (Error | RuntimeException exception) {
+              wrapped.put("error", wrapError(exception));
+              reply.reply(wrapped);
+            }
+          });
+        } else {
+          channel.setMessageHandler(null);
+        }
+      }
+    }
+  }
+  private static class AdvertiseApiCodec extends StandardMessageCodec {
+    public static final AdvertiseApiCodec INSTANCE = new AdvertiseApiCodec();
+    private AdvertiseApiCodec() {}
+  }
+
+  /** Generated interface from Pigeon that represents a handler of messages from Flutter.*/
+  public interface AdvertiseApi {
     void startAdvertise(Result<Void> result);
     void stopAdvertise(Result<Void> result);
-    void sendMessage(String toDeviceId, String endpoint, String payload, Result<Void> result);
-    void sendMessageToVerifiedDevice(String endpoint, String data, Result<Void> result);
 
-    /** The codec used by CommunicationApi. */
+    /** The codec used by AdvertiseApi. */
     static MessageCodec<Object> getCodec() {
-      return CommunicationApiCodec.INSTANCE;
+      return AdvertiseApiCodec.INSTANCE;
     }
 
-    /** Sets up an instance of `CommunicationApi` to handle messages through the `binaryMessenger`. */
-    static void setup(BinaryMessenger binaryMessenger, CommunicationApi api) {
+    /** Sets up an instance of `AdvertiseApi` to handle messages through the `binaryMessenger`. */
+    static void setup(BinaryMessenger binaryMessenger, AdvertiseApi api) {
       {
         BasicMessageChannel<Object> channel =
-            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.CommunicationApi.startAdvertise", getCodec());
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.AdvertiseApi.startAdvertise", getCodec());
         if (api != null) {
           channel.setMessageHandler((message, reply) -> {
             Map<String, Object> wrapped = new HashMap<>();
@@ -470,7 +656,7 @@ public class Pigeon {
       }
       {
         BasicMessageChannel<Object> channel =
-            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.CommunicationApi.stopAdvertise", getCodec());
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.AdvertiseApi.stopAdvertise", getCodec());
         if (api != null) {
           channel.setMessageHandler((message, reply) -> {
             Map<String, Object> wrapped = new HashMap<>();
@@ -497,6 +683,25 @@ public class Pigeon {
           channel.setMessageHandler(null);
         }
       }
+    }
+  }
+  private static class CommunicationApiCodec extends StandardMessageCodec {
+    public static final CommunicationApiCodec INSTANCE = new CommunicationApiCodec();
+    private CommunicationApiCodec() {}
+  }
+
+  /** Generated interface from Pigeon that represents a handler of messages from Flutter.*/
+  public interface CommunicationApi {
+    void sendMessage(String toDeviceId, String endpoint, String payload, Result<Void> result);
+    void sendMessageToVerifiedDevice(String endpoint, String data, Result<Void> result);
+
+    /** The codec used by CommunicationApi. */
+    static MessageCodec<Object> getCodec() {
+      return CommunicationApiCodec.INSTANCE;
+    }
+
+    /** Sets up an instance of `CommunicationApi` to handle messages through the `binaryMessenger`. */
+    static void setup(BinaryMessenger binaryMessenger, CommunicationApi api) {
       {
         BasicMessageChannel<Object> channel =
             new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.CommunicationApi.sendMessage", getCodec());
@@ -586,9 +791,6 @@ public class Pigeon {
     protected Object readValueOfType(byte type, ByteBuffer buffer) {
       switch (type) {
         case (byte)128:         
-          return ConnectedDevice.fromMap((Map<String, Object>) readValue(buffer));
-        
-        case (byte)129:         
           return DataMessage.fromMap((Map<String, Object>) readValue(buffer));
         
         default:        
@@ -598,12 +800,8 @@ public class Pigeon {
     }
     @Override
     protected void writeValue(ByteArrayOutputStream stream, Object value)     {
-      if (value instanceof ConnectedDevice) {
-        stream.write(128);
-        writeValue(stream, ((ConnectedDevice) value).toMap());
-      } else 
       if (value instanceof DataMessage) {
-        stream.write(129);
+        stream.write(128);
         writeValue(stream, ((DataMessage) value).toMap());
       } else 
 {
@@ -625,22 +823,6 @@ public class Pigeon {
       return CommunicationCallbackApiCodec.INSTANCE;
     }
 
-    public void onDeviceConnected(ConnectedDevice deviceArg, Reply<Boolean> callback) {
-      BasicMessageChannel<Object> channel =
-          new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.CommunicationCallbackApi.onDeviceConnected", getCodec());
-      channel.send(new ArrayList<Object>(Arrays.asList(deviceArg)), channelReply -> {
-        @SuppressWarnings("ConstantConditions")
-        Boolean output = (Boolean)channelReply;
-        callback.reply(output);
-      });
-    }
-    public void onDeviceDisconnected(ConnectedDevice deviceArg, Reply<Void> callback) {
-      BasicMessageChannel<Object> channel =
-          new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.CommunicationCallbackApi.onDeviceDisconnected", getCodec());
-      channel.send(new ArrayList<Object>(Arrays.asList(deviceArg)), channelReply -> {
-        callback.reply(null);
-      });
-    }
     public void onMessageReceived(DataMessage msgArg, Reply<Void> callback) {
       BasicMessageChannel<Object> channel =
           new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.CommunicationCallbackApi.onMessageReceived", getCodec());

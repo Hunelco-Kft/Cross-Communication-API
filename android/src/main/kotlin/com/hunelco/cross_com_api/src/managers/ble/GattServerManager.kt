@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 import android.content.Context
-import com.hunelco.cross_com_api.src.managers.IServerManager
 import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.ble.profiles.GeneralProfile
 import com.hunelco.cross_com_api.src.models.BleDevice
@@ -23,11 +22,10 @@ import kotlin.coroutines.suspendCoroutine
  */
 @SuppressLint("MissingPermission")
 class GattServerManager private constructor(private val context: Context) :
-    BleServerManager(context), IServerManager, ServerObserver {
+    BleServerManager(context), ServerObserver {
+    var config: Pigeon.Config? = null
 
-    override var config: Pigeon.ServerConfig? = null
-
-    private val sessionManager = SessionManager.getInstance(context)
+    private val sessionManager = SessionManager.getInstance()
 
     private val generalGattCharacteristic = characteristic(
         GeneralProfile.CHARACTERISTIC,
@@ -87,17 +85,17 @@ class GattServerManager private constructor(private val context: Context) :
         removedConn?.device?.disconnect()?.enqueue()
     }
 
-    override suspend fun startAdvertise() {
+    fun startAdvertise() {
         bleAdvertiser.startAdvertising(reqAdvSettings, reqAdvData, bleAdvertiseCallback)
         Timber.i("Start advertising - GattServerManager")
     }
 
-    override suspend fun stopAdvertise() {
+    fun stopAdvertise() {
         bleAdvertiser.stopAdvertising(bleAdvertiseCallback)
         Timber.i("Stop advertising - GattServerManager")
     }
 
-    override suspend fun sendMessage(deviceId: String, data: String) {
+    suspend fun sendMessage(deviceId: String, data: String) {
         val device = sessionManager.getCastedConnection<BleDevice>(deviceId) ?: return
         device.device.sendMessage(data)
     }

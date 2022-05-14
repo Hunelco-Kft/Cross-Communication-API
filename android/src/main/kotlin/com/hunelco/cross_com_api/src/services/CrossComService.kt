@@ -13,9 +13,9 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import com.google.gson.Gson
+import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.ble.GattServerManager
 import com.hunelco.cross_com_api.src.managers.nearby.NearbyServerManager
-import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.models.DataPayload
 import com.hunelco.cross_com_api.src.utils.NotificationUtils
 import io.flutter.plugin.common.BinaryMessenger
@@ -28,8 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 const val NOTIFICATION_ID = 101
 
-class CrossComService : Service(), Pigeon.CommunicationApi {
-    private var sessionManager: SessionManager? = null
+class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi {
+    private var sessionManager = SessionManager.getInstance()
 
     private var gattManager: GattServerManager? = null
     private var nearbyManager: NearbyServerManager? = null
@@ -97,7 +97,6 @@ class CrossComService : Service(), Pigeon.CommunicationApi {
             startForeground(NOTIFICATION_ID, notification)
         }
 
-        sessionManager = SessionManager.getInstance(this)
         gattManager = GattServerManager.getInstance(this)
         nearbyManager = NearbyServerManager.getInstance(this)
 
@@ -198,11 +197,11 @@ class CrossComService : Service(), Pigeon.CommunicationApi {
      * Functionality available to clients
      */
     private inner class DataPlane : Binder(), CommunicationAPI {
-        override fun onSetup(config: Pigeon.ServerConfig, binaryMessenger: BinaryMessenger) {
+        override fun onSetup(config: Pigeon.Config, binaryMessenger: BinaryMessenger) {
             gattManager!!.config = config
             nearbyManager!!.config = config
 
-            sessionManager?.updateBinaryMessenger(binaryMessenger)
+            sessionManager.updateBinaryMessenger(binaryMessenger)
             stateCallbackApi = Pigeon.StateCallbackApi(binaryMessenger)
 
             Pigeon.CommunicationApi.setup(binaryMessenger, this@CrossComService)

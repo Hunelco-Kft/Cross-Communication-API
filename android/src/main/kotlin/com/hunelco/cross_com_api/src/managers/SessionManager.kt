@@ -1,6 +1,5 @@
 package com.hunelco.cross_com_api.src.managers
 
-import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.google.gson.Gson
@@ -11,10 +10,11 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugins.Pigeon
 import timber.log.Timber
 
-class SessionManager private constructor(context: Context) {
+class SessionManager private constructor() {
     private val connections = mutableMapOf<String, ConnectedDevice<*>>()
 
-    private var callback: Pigeon.CommunicationCallbackApi? = null
+    private var connectionCallback: Pigeon.ConnectionCallbackApi? = null
+    private var communicationCallback: Pigeon.CommunicationCallbackApi? = null
 
     private val _verifiedDevice = MutableLiveData<ConnectedDevice<*>?>()
     val verifiedDevice: LiveData<ConnectedDevice<*>?>
@@ -22,8 +22,9 @@ class SessionManager private constructor(context: Context) {
 
     private val gson = Gson()
 
-    fun updateBinaryMessenger(binaryMessenger: BinaryMessenger) {
-        callback = Pigeon.CommunicationCallbackApi(binaryMessenger)
+    fun updateBinaryMessenger(binaryMessenger: BinaryMessenger?) {
+        connectionCallback = Pigeon.ConnectionCallbackApi(binaryMessenger)
+        communicationCallback = Pigeon.CommunicationCallbackApi(binaryMessenger)
     }
 
     fun getConnection(id: String): ConnectedDevice<*>? = connections[id]
@@ -38,7 +39,7 @@ class SessionManager private constructor(context: Context) {
                 .setProvider(if (conn is BleDevice) Pigeon.Provider.gatt else Pigeon.Provider.nearby)
                 .build()
 
-            callback?.onDeviceDisconnected(connectedDevice) {}
+            connectionCallback?.onDeviceDisconnected(connectedDevice) {}
         }
 
         return conn
@@ -60,7 +61,7 @@ class SessionManager private constructor(context: Context) {
             .setProvider(provider)
             .build()
 
-        callback?.onDeviceConnected(connectedDevice) { isVerified ->
+        connectionCallback?.onDeviceConnected(connectedDevice) { isVerified ->
             if (isVerified) _verifiedDevice.value = conn
         }
     }
@@ -84,19 +85,19 @@ class SessionManager private constructor(context: Context) {
                 setEndpoint(dataPayload.endpoint)
             }.build()
 
-            callback?.onMessageReceived(dataMsg) {}
+            communicationCallback?.onMessageReceived(dataMsg) {}
         } catch (ex: Exception) {
             Timber.w(ex, "Couldn't serialize message. Msg: $data")
-            callback?.onRawMessageReceived(data) {}
+            communicationCallback?.onRawMessageReceived(deviceId, data) {}
         }
     }
 
     companion object {
         private lateinit var instance: SessionManager
 
-        fun getInstance(context: Context): SessionManager {
+        fun getInstance(): SessionManager {
             if (!::instance.isInitialized) {
-                instance = SessionManager(context.applicationContext)
+                instance = SessionManager()
             }
 
             return instance

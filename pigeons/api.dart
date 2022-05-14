@@ -6,7 +6,7 @@ enum Provider { gatt, nearby }
 
 enum State { on, off, unknown }
 
-class ServerConfig {
+class Config {
   String? name;
 
   NearbyStrategy? strategy;
@@ -37,26 +37,47 @@ class StateResponse {
 @HostApi()
 abstract class ServerApi {
   // It starts the server if it is not started yet as a foreground service
-  void startServer(ServerConfig config);
+  void startServer(Config config);
 
   void stopServer();
 }
 
 @HostApi()
-abstract class ClientApi {
+abstract class ConnectionApi {
+  @async
+  ConnectedDevice connect(String endpointId, String displayName);
+
+  @async
+  void disconnect(String id);
+}
+
+@FlutterApi()
+abstract class ConnectionCallbackApi {
+  bool onDeviceConnected(ConnectedDevice device);
+
+  void onDeviceDisconnected(ConnectedDevice device);
+}
+
+@HostApi()
+abstract class DiscoveryApi {
+  @async
   void startDiscovery();
 
+  @async
   void stopDiscovery();
 }
 
 @HostApi()
-abstract class CommunicationApi {
+abstract class AdvertiseApi {
   @async
   void startAdvertise();
 
   @async
   void stopAdvertise();
+}
 
+@HostApi()
+abstract class CommunicationApi {
   @async
   void sendMessage(String toDeviceId, String endpoint, String payload);
 
@@ -66,10 +87,6 @@ abstract class CommunicationApi {
 
 @FlutterApi()
 abstract class CommunicationCallbackApi {
-  bool onDeviceConnected(ConnectedDevice device);
-
-  void onDeviceDisconnected(ConnectedDevice device);
-
   void onMessageReceived(DataMessage msg);
 
   void onRawMessageReceived(String deviceId, String msg);

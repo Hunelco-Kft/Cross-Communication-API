@@ -27,8 +27,8 @@ static id GetNullableObject(NSDictionary* dict, id key) {
 }
 
 
-@interface FLTServerConfig ()
-+ (FLTServerConfig *)fromMap:(NSDictionary *)dict;
+@interface FLTConfig ()
++ (FLTConfig *)fromMap:(NSDictionary *)dict;
 - (NSDictionary *)toMap;
 @end
 @interface FLTDataMessage ()
@@ -44,18 +44,18 @@ static id GetNullableObject(NSDictionary* dict, id key) {
 - (NSDictionary *)toMap;
 @end
 
-@implementation FLTServerConfig
+@implementation FLTConfig
 + (instancetype)makeWithName:(nullable NSString *)name
     strategy:(FLTNearbyStrategy)strategy
     allowMultipleVerifiedDevice:(nullable NSNumber *)allowMultipleVerifiedDevice {
-  FLTServerConfig* pigeonResult = [[FLTServerConfig alloc] init];
+  FLTConfig* pigeonResult = [[FLTConfig alloc] init];
   pigeonResult.name = name;
   pigeonResult.strategy = strategy;
   pigeonResult.allowMultipleVerifiedDevice = allowMultipleVerifiedDevice;
   return pigeonResult;
 }
-+ (FLTServerConfig *)fromMap:(NSDictionary *)dict {
-  FLTServerConfig *pigeonResult = [[FLTServerConfig alloc] init];
++ (FLTConfig *)fromMap:(NSDictionary *)dict {
+  FLTConfig *pigeonResult = [[FLTConfig alloc] init];
   pigeonResult.name = GetNullableObject(dict, @"name");
   pigeonResult.strategy = [GetNullableObject(dict, @"strategy") integerValue];
   pigeonResult.allowMultipleVerifiedDevice = GetNullableObject(dict, @"allowMultipleVerifiedDevice");
@@ -133,7 +133,7 @@ static id GetNullableObject(NSDictionary* dict, id key) {
 {
   switch (type) {
     case 128:     
-      return [FLTServerConfig fromMap:[self readValue]];
+      return [FLTConfig fromMap:[self readValue]];
     
     default:    
       return [super readValueOfType:type];
@@ -147,7 +147,7 @@ static id GetNullableObject(NSDictionary* dict, id key) {
 @implementation FLTServerApiCodecWriter
 - (void)writeValue:(id)value 
 {
-  if ([value isKindOfClass:[FLTServerConfig class]]) {
+  if ([value isKindOfClass:[FLTConfig class]]) {
     [self writeByte:128];
     [self writeValue:[value toMap]];
   } else 
@@ -190,7 +190,7 @@ void FLTServerApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTS
       NSCAssert([api respondsToSelector:@selector(startServerConfig:error:)], @"FLTServerApi api (%@) doesn't respond to @selector(startServerConfig:error:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
         NSArray *args = message;
-        FLTServerConfig *arg_config = args[0];
+        FLTConfig *arg_config = args[0];
         FlutterError *error;
         [api startServerConfig:arg_config error:&error];
         callback(wrapResult(nil, error));
@@ -219,51 +219,75 @@ void FLTServerApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTS
     }
   }
 }
-@interface FLTClientApiCodecReader : FlutterStandardReader
+@interface FLTConnectionApiCodecReader : FlutterStandardReader
 @end
-@implementation FLTClientApiCodecReader
+@implementation FLTConnectionApiCodecReader
+- (nullable id)readValueOfType:(UInt8)type 
+{
+  switch (type) {
+    case 128:     
+      return [FLTConnectedDevice fromMap:[self readValue]];
+    
+    default:    
+      return [super readValueOfType:type];
+    
+  }
+}
 @end
 
-@interface FLTClientApiCodecWriter : FlutterStandardWriter
+@interface FLTConnectionApiCodecWriter : FlutterStandardWriter
 @end
-@implementation FLTClientApiCodecWriter
+@implementation FLTConnectionApiCodecWriter
+- (void)writeValue:(id)value 
+{
+  if ([value isKindOfClass:[FLTConnectedDevice class]]) {
+    [self writeByte:128];
+    [self writeValue:[value toMap]];
+  } else 
+{
+    [super writeValue:value];
+  }
+}
 @end
 
-@interface FLTClientApiCodecReaderWriter : FlutterStandardReaderWriter
+@interface FLTConnectionApiCodecReaderWriter : FlutterStandardReaderWriter
 @end
-@implementation FLTClientApiCodecReaderWriter
+@implementation FLTConnectionApiCodecReaderWriter
 - (FlutterStandardWriter *)writerWithData:(NSMutableData *)data {
-  return [[FLTClientApiCodecWriter alloc] initWithData:data];
+  return [[FLTConnectionApiCodecWriter alloc] initWithData:data];
 }
 - (FlutterStandardReader *)readerWithData:(NSData *)data {
-  return [[FLTClientApiCodecReader alloc] initWithData:data];
+  return [[FLTConnectionApiCodecReader alloc] initWithData:data];
 }
 @end
 
-NSObject<FlutterMessageCodec> *FLTClientApiGetCodec() {
+NSObject<FlutterMessageCodec> *FLTConnectionApiGetCodec() {
   static dispatch_once_t sPred = 0;
   static FlutterStandardMessageCodec *sSharedObject = nil;
   dispatch_once(&sPred, ^{
-    FLTClientApiCodecReaderWriter *readerWriter = [[FLTClientApiCodecReaderWriter alloc] init];
+    FLTConnectionApiCodecReaderWriter *readerWriter = [[FLTConnectionApiCodecReaderWriter alloc] init];
     sSharedObject = [FlutterStandardMessageCodec codecWithReaderWriter:readerWriter];
   });
   return sSharedObject;
 }
 
 
-void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTClientApi> *api) {
+void FLTConnectionApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTConnectionApi> *api) {
   {
     FlutterBasicMessageChannel *channel =
       [FlutterBasicMessageChannel
-        messageChannelWithName:@"dev.flutter.pigeon.ClientApi.startDiscovery"
+        messageChannelWithName:@"dev.flutter.pigeon.ConnectionApi.connect"
         binaryMessenger:binaryMessenger
-        codec:FLTClientApiGetCodec()];
+        codec:FLTConnectionApiGetCodec()];
     if (api) {
-      NSCAssert([api respondsToSelector:@selector(startDiscoveryWithError:)], @"FLTClientApi api (%@) doesn't respond to @selector(startDiscoveryWithError:)", api);
+      NSCAssert([api respondsToSelector:@selector(connectEndpointId:displayName:completion:)], @"FLTConnectionApi api (%@) doesn't respond to @selector(connectEndpointId:displayName:completion:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        FlutterError *error;
-        [api startDiscoveryWithError:&error];
-        callback(wrapResult(nil, error));
+        NSArray *args = message;
+        NSString *arg_endpointId = args[0];
+        NSString *arg_displayName = args[1];
+        [api connectEndpointId:arg_endpointId displayName:arg_displayName completion:^(FLTConnectedDevice *_Nullable output, FlutterError *_Nullable error) {
+          callback(wrapResult(output, error));
+        }];
       }];
     }
     else {
@@ -273,15 +297,245 @@ void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTC
   {
     FlutterBasicMessageChannel *channel =
       [FlutterBasicMessageChannel
-        messageChannelWithName:@"dev.flutter.pigeon.ClientApi.stopDiscovery"
+        messageChannelWithName:@"dev.flutter.pigeon.ConnectionApi.disconnect"
         binaryMessenger:binaryMessenger
-        codec:FLTClientApiGetCodec()];
+        codec:FLTConnectionApiGetCodec()];
     if (api) {
-      NSCAssert([api respondsToSelector:@selector(stopDiscoveryWithError:)], @"FLTClientApi api (%@) doesn't respond to @selector(stopDiscoveryWithError:)", api);
+      NSCAssert([api respondsToSelector:@selector(disconnectId:completion:)], @"FLTConnectionApi api (%@) doesn't respond to @selector(disconnectId:completion:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        FlutterError *error;
-        [api stopDiscoveryWithError:&error];
-        callback(wrapResult(nil, error));
+        NSArray *args = message;
+        NSString *arg_id = args[0];
+        [api disconnectId:arg_id completion:^(FlutterError *_Nullable error) {
+          callback(wrapResult(nil, error));
+        }];
+      }];
+    }
+    else {
+      [channel setMessageHandler:nil];
+    }
+  }
+}
+@interface FLTConnectionCallbackApiCodecReader : FlutterStandardReader
+@end
+@implementation FLTConnectionCallbackApiCodecReader
+- (nullable id)readValueOfType:(UInt8)type 
+{
+  switch (type) {
+    case 128:     
+      return [FLTConnectedDevice fromMap:[self readValue]];
+    
+    default:    
+      return [super readValueOfType:type];
+    
+  }
+}
+@end
+
+@interface FLTConnectionCallbackApiCodecWriter : FlutterStandardWriter
+@end
+@implementation FLTConnectionCallbackApiCodecWriter
+- (void)writeValue:(id)value 
+{
+  if ([value isKindOfClass:[FLTConnectedDevice class]]) {
+    [self writeByte:128];
+    [self writeValue:[value toMap]];
+  } else 
+{
+    [super writeValue:value];
+  }
+}
+@end
+
+@interface FLTConnectionCallbackApiCodecReaderWriter : FlutterStandardReaderWriter
+@end
+@implementation FLTConnectionCallbackApiCodecReaderWriter
+- (FlutterStandardWriter *)writerWithData:(NSMutableData *)data {
+  return [[FLTConnectionCallbackApiCodecWriter alloc] initWithData:data];
+}
+- (FlutterStandardReader *)readerWithData:(NSData *)data {
+  return [[FLTConnectionCallbackApiCodecReader alloc] initWithData:data];
+}
+@end
+
+NSObject<FlutterMessageCodec> *FLTConnectionCallbackApiGetCodec() {
+  static dispatch_once_t sPred = 0;
+  static FlutterStandardMessageCodec *sSharedObject = nil;
+  dispatch_once(&sPred, ^{
+    FLTConnectionCallbackApiCodecReaderWriter *readerWriter = [[FLTConnectionCallbackApiCodecReaderWriter alloc] init];
+    sSharedObject = [FlutterStandardMessageCodec codecWithReaderWriter:readerWriter];
+  });
+  return sSharedObject;
+}
+
+
+@interface FLTConnectionCallbackApi ()
+@property (nonatomic, strong) NSObject<FlutterBinaryMessenger> *binaryMessenger;
+@end
+
+@implementation FLTConnectionCallbackApi
+
+- (instancetype)initWithBinaryMessenger:(NSObject<FlutterBinaryMessenger> *)binaryMessenger {
+  self = [super init];
+  if (self) {
+    _binaryMessenger = binaryMessenger;
+  }
+  return self;
+}
+- (void)onDeviceConnectedDevice:(FLTConnectedDevice *)arg_device completion:(void(^)(NSNumber *_Nullable, NSError *_Nullable))completion {
+  FlutterBasicMessageChannel *channel =
+    [FlutterBasicMessageChannel
+      messageChannelWithName:@"dev.flutter.pigeon.ConnectionCallbackApi.onDeviceConnected"
+      binaryMessenger:self.binaryMessenger
+      codec:FLTConnectionCallbackApiGetCodec()];
+  [channel sendMessage:@[arg_device] reply:^(id reply) {
+    NSNumber *output = reply;
+    completion(output, nil);
+  }];
+}
+- (void)onDeviceDisconnectedDevice:(FLTConnectedDevice *)arg_device completion:(void(^)(NSError *_Nullable))completion {
+  FlutterBasicMessageChannel *channel =
+    [FlutterBasicMessageChannel
+      messageChannelWithName:@"dev.flutter.pigeon.ConnectionCallbackApi.onDeviceDisconnected"
+      binaryMessenger:self.binaryMessenger
+      codec:FLTConnectionCallbackApiGetCodec()];
+  [channel sendMessage:@[arg_device] reply:^(id reply) {
+    completion(nil);
+  }];
+}
+@end
+@interface FLTDiscoveryApiCodecReader : FlutterStandardReader
+@end
+@implementation FLTDiscoveryApiCodecReader
+@end
+
+@interface FLTDiscoveryApiCodecWriter : FlutterStandardWriter
+@end
+@implementation FLTDiscoveryApiCodecWriter
+@end
+
+@interface FLTDiscoveryApiCodecReaderWriter : FlutterStandardReaderWriter
+@end
+@implementation FLTDiscoveryApiCodecReaderWriter
+- (FlutterStandardWriter *)writerWithData:(NSMutableData *)data {
+  return [[FLTDiscoveryApiCodecWriter alloc] initWithData:data];
+}
+- (FlutterStandardReader *)readerWithData:(NSData *)data {
+  return [[FLTDiscoveryApiCodecReader alloc] initWithData:data];
+}
+@end
+
+NSObject<FlutterMessageCodec> *FLTDiscoveryApiGetCodec() {
+  static dispatch_once_t sPred = 0;
+  static FlutterStandardMessageCodec *sSharedObject = nil;
+  dispatch_once(&sPred, ^{
+    FLTDiscoveryApiCodecReaderWriter *readerWriter = [[FLTDiscoveryApiCodecReaderWriter alloc] init];
+    sSharedObject = [FlutterStandardMessageCodec codecWithReaderWriter:readerWriter];
+  });
+  return sSharedObject;
+}
+
+
+void FLTDiscoveryApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTDiscoveryApi> *api) {
+  {
+    FlutterBasicMessageChannel *channel =
+      [FlutterBasicMessageChannel
+        messageChannelWithName:@"dev.flutter.pigeon.DiscoveryApi.startDiscovery"
+        binaryMessenger:binaryMessenger
+        codec:FLTDiscoveryApiGetCodec()];
+    if (api) {
+      NSCAssert([api respondsToSelector:@selector(startDiscoveryWithCompletion:)], @"FLTDiscoveryApi api (%@) doesn't respond to @selector(startDiscoveryWithCompletion:)", api);
+      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
+        [api startDiscoveryWithCompletion:^(FlutterError *_Nullable error) {
+          callback(wrapResult(nil, error));
+        }];
+      }];
+    }
+    else {
+      [channel setMessageHandler:nil];
+    }
+  }
+  {
+    FlutterBasicMessageChannel *channel =
+      [FlutterBasicMessageChannel
+        messageChannelWithName:@"dev.flutter.pigeon.DiscoveryApi.stopDiscovery"
+        binaryMessenger:binaryMessenger
+        codec:FLTDiscoveryApiGetCodec()];
+    if (api) {
+      NSCAssert([api respondsToSelector:@selector(stopDiscoveryWithCompletion:)], @"FLTDiscoveryApi api (%@) doesn't respond to @selector(stopDiscoveryWithCompletion:)", api);
+      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
+        [api stopDiscoveryWithCompletion:^(FlutterError *_Nullable error) {
+          callback(wrapResult(nil, error));
+        }];
+      }];
+    }
+    else {
+      [channel setMessageHandler:nil];
+    }
+  }
+}
+@interface FLTAdvertiseApiCodecReader : FlutterStandardReader
+@end
+@implementation FLTAdvertiseApiCodecReader
+@end
+
+@interface FLTAdvertiseApiCodecWriter : FlutterStandardWriter
+@end
+@implementation FLTAdvertiseApiCodecWriter
+@end
+
+@interface FLTAdvertiseApiCodecReaderWriter : FlutterStandardReaderWriter
+@end
+@implementation FLTAdvertiseApiCodecReaderWriter
+- (FlutterStandardWriter *)writerWithData:(NSMutableData *)data {
+  return [[FLTAdvertiseApiCodecWriter alloc] initWithData:data];
+}
+- (FlutterStandardReader *)readerWithData:(NSData *)data {
+  return [[FLTAdvertiseApiCodecReader alloc] initWithData:data];
+}
+@end
+
+NSObject<FlutterMessageCodec> *FLTAdvertiseApiGetCodec() {
+  static dispatch_once_t sPred = 0;
+  static FlutterStandardMessageCodec *sSharedObject = nil;
+  dispatch_once(&sPred, ^{
+    FLTAdvertiseApiCodecReaderWriter *readerWriter = [[FLTAdvertiseApiCodecReaderWriter alloc] init];
+    sSharedObject = [FlutterStandardMessageCodec codecWithReaderWriter:readerWriter];
+  });
+  return sSharedObject;
+}
+
+
+void FLTAdvertiseApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTAdvertiseApi> *api) {
+  {
+    FlutterBasicMessageChannel *channel =
+      [FlutterBasicMessageChannel
+        messageChannelWithName:@"dev.flutter.pigeon.AdvertiseApi.startAdvertise"
+        binaryMessenger:binaryMessenger
+        codec:FLTAdvertiseApiGetCodec()];
+    if (api) {
+      NSCAssert([api respondsToSelector:@selector(startAdvertiseWithCompletion:)], @"FLTAdvertiseApi api (%@) doesn't respond to @selector(startAdvertiseWithCompletion:)", api);
+      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
+        [api startAdvertiseWithCompletion:^(FlutterError *_Nullable error) {
+          callback(wrapResult(nil, error));
+        }];
+      }];
+    }
+    else {
+      [channel setMessageHandler:nil];
+    }
+  }
+  {
+    FlutterBasicMessageChannel *channel =
+      [FlutterBasicMessageChannel
+        messageChannelWithName:@"dev.flutter.pigeon.AdvertiseApi.stopAdvertise"
+        binaryMessenger:binaryMessenger
+        codec:FLTAdvertiseApiGetCodec()];
+    if (api) {
+      NSCAssert([api respondsToSelector:@selector(stopAdvertiseWithCompletion:)], @"FLTAdvertiseApi api (%@) doesn't respond to @selector(stopAdvertiseWithCompletion:)", api);
+      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
+        [api stopAdvertiseWithCompletion:^(FlutterError *_Nullable error) {
+          callback(wrapResult(nil, error));
+        }];
       }];
     }
     else {
@@ -322,42 +576,6 @@ NSObject<FlutterMessageCodec> *FLTCommunicationApiGetCodec() {
 
 
 void FLTCommunicationApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTCommunicationApi> *api) {
-  {
-    FlutterBasicMessageChannel *channel =
-      [FlutterBasicMessageChannel
-        messageChannelWithName:@"dev.flutter.pigeon.CommunicationApi.startAdvertise"
-        binaryMessenger:binaryMessenger
-        codec:FLTCommunicationApiGetCodec()];
-    if (api) {
-      NSCAssert([api respondsToSelector:@selector(startAdvertiseWithCompletion:)], @"FLTCommunicationApi api (%@) doesn't respond to @selector(startAdvertiseWithCompletion:)", api);
-      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        [api startAdvertiseWithCompletion:^(FlutterError *_Nullable error) {
-          callback(wrapResult(nil, error));
-        }];
-      }];
-    }
-    else {
-      [channel setMessageHandler:nil];
-    }
-  }
-  {
-    FlutterBasicMessageChannel *channel =
-      [FlutterBasicMessageChannel
-        messageChannelWithName:@"dev.flutter.pigeon.CommunicationApi.stopAdvertise"
-        binaryMessenger:binaryMessenger
-        codec:FLTCommunicationApiGetCodec()];
-    if (api) {
-      NSCAssert([api respondsToSelector:@selector(stopAdvertiseWithCompletion:)], @"FLTCommunicationApi api (%@) doesn't respond to @selector(stopAdvertiseWithCompletion:)", api);
-      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        [api stopAdvertiseWithCompletion:^(FlutterError *_Nullable error) {
-          callback(wrapResult(nil, error));
-        }];
-      }];
-    }
-    else {
-      [channel setMessageHandler:nil];
-    }
-  }
   {
     FlutterBasicMessageChannel *channel =
       [FlutterBasicMessageChannel
@@ -409,9 +627,6 @@ void FLTCommunicationApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObje
 {
   switch (type) {
     case 128:     
-      return [FLTConnectedDevice fromMap:[self readValue]];
-    
-    case 129:     
       return [FLTDataMessage fromMap:[self readValue]];
     
     default:    
@@ -426,12 +641,8 @@ void FLTCommunicationApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObje
 @implementation FLTCommunicationCallbackApiCodecWriter
 - (void)writeValue:(id)value 
 {
-  if ([value isKindOfClass:[FLTConnectedDevice class]]) {
-    [self writeByte:128];
-    [self writeValue:[value toMap]];
-  } else 
   if ([value isKindOfClass:[FLTDataMessage class]]) {
-    [self writeByte:129];
+    [self writeByte:128];
     [self writeValue:[value toMap]];
   } else 
 {
@@ -474,27 +685,6 @@ NSObject<FlutterMessageCodec> *FLTCommunicationCallbackApiGetCodec() {
     _binaryMessenger = binaryMessenger;
   }
   return self;
-}
-- (void)onDeviceConnectedDevice:(FLTConnectedDevice *)arg_device completion:(void(^)(NSNumber *_Nullable, NSError *_Nullable))completion {
-  FlutterBasicMessageChannel *channel =
-    [FlutterBasicMessageChannel
-      messageChannelWithName:@"dev.flutter.pigeon.CommunicationCallbackApi.onDeviceConnected"
-      binaryMessenger:self.binaryMessenger
-      codec:FLTCommunicationCallbackApiGetCodec()];
-  [channel sendMessage:@[arg_device] reply:^(id reply) {
-    NSNumber *output = reply;
-    completion(output, nil);
-  }];
-}
-- (void)onDeviceDisconnectedDevice:(FLTConnectedDevice *)arg_device completion:(void(^)(NSError *_Nullable))completion {
-  FlutterBasicMessageChannel *channel =
-    [FlutterBasicMessageChannel
-      messageChannelWithName:@"dev.flutter.pigeon.CommunicationCallbackApi.onDeviceDisconnected"
-      binaryMessenger:self.binaryMessenger
-      codec:FLTCommunicationCallbackApiGetCodec()];
-  [channel sendMessage:@[arg_device] reply:^(id reply) {
-    completion(nil);
-  }];
 }
 - (void)onMessageReceivedMsg:(FLTDataMessage *)arg_msg completion:(void(^)(NSError *_Nullable))completion {
   FlutterBasicMessageChannel *channel =
