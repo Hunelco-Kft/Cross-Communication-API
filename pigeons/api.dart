@@ -44,7 +44,7 @@ abstract class ServerApi {
 
 @HostApi()
 abstract class ClientApi {
-  void startServer(Config config);
+  void startClient(Config config);
 }
 
 @HostApi()

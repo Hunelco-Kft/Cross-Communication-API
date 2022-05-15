@@ -79,7 +79,7 @@ NSObject<FlutterMessageCodec> *FLTClientApiGetCodec(void);
 
 @protocol FLTClientApi
 /// @return `nil` only when `error != nil`.
-- (void)startServerConfig:(FLTConfig *)config error:(FlutterError *_Nullable *_Nonnull)error;
+- (void)startClientConfig:(FLTConfig *)config error:(FlutterError *_Nullable *_Nonnull)error;
 @end
 
 extern void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTClientApi> *_Nullable api);

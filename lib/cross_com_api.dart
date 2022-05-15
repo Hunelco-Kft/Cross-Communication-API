@@ -94,7 +94,7 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
   Future<void> startServer(
       {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) {
     final config = Config(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
-    return _api.startServer(config);
+    return _api.startClient(config);
   }
 
   Future<void> startDiscovery({int timeoutInSeconds = 10000000}) async {
