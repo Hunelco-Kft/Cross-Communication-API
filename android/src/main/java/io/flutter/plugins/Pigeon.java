@@ -671,6 +671,39 @@ public class Pigeon {
       }
     }
   }
+  private static class DiscoveryCallbackApiCodec extends StandardMessageCodec {
+    public static final DiscoveryCallbackApiCodec INSTANCE = new DiscoveryCallbackApiCodec();
+    private DiscoveryCallbackApiCodec() {}
+  }
+
+  /** Generated class from Pigeon that represents Flutter messages that can be called from Java.*/
+  public static class DiscoveryCallbackApi {
+    private final BinaryMessenger binaryMessenger;
+    public DiscoveryCallbackApi(BinaryMessenger argBinaryMessenger){
+      this.binaryMessenger = argBinaryMessenger;
+    }
+    public interface Reply<T> {
+      void reply(T reply);
+    }
+    static MessageCodec<Object> getCodec() {
+      return DiscoveryCallbackApiCodec.INSTANCE;
+    }
+
+    public void onDeviceDiscovered(String deviceIdArg, Reply<Void> callback) {
+      BasicMessageChannel<Object> channel =
+          new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceDiscovered", getCodec());
+      channel.send(new ArrayList<Object>(Arrays.asList(deviceIdArg)), channelReply -> {
+        callback.reply(null);
+      });
+    }
+    public void onDeviceLost(String deviceIdArg, Reply<Void> callback) {
+      BasicMessageChannel<Object> channel =
+          new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceLost", getCodec());
+      channel.send(new ArrayList<Object>(Arrays.asList(deviceIdArg)), channelReply -> {
+        callback.reply(null);
+      });
+    }
+  }
   private static class AdvertiseApiCodec extends StandardMessageCodec {
     public static final AdvertiseApiCodec INSTANCE = new AdvertiseApiCodec();
     private AdvertiseApiCodec() {}

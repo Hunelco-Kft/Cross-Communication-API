@@ -67,7 +67,7 @@ class CrossComServerApi extends BaseApi with ConnectionCallbackApi, Communicatio
   }
 }
 
-class CrossComClientApi extends BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, StateCallbackApi {
+class CrossComClientApi extends BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, StateCallbackApi, DiscoveryCallbackApi {
   final characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
   final serviceUuid = Guid("00001111-0000-1000-8000-00805F9B34FB");
 
@@ -85,6 +85,9 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
 
   BluetoothCharacteristic? _generalCharacteristic;
 
+  StreamController<String>? _onDeviceStreamController;
+  Stream<String>? _onDeviceStream;
+
   constructor() {
     ConnectionCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
     CommunicationCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
@@ -100,6 +103,8 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
   Future<void> startDiscovery({int timeoutInSeconds = 10000000}) async {
     _devices.clear();
 
+    _onDeviceStreamController = StreamController<String>();
+    _onDeviceStream = _onDeviceStreamController?.stream;
     if (Platform.isAndroid) {
       await _discoveryApi.startDiscovery();
     } else {
@@ -115,6 +120,8 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
   }
 
   Future<void> stopDiscovery() async {
+    _onDeviceStreamController?.close(); // TODO
+
     // if (Platform.isAndroid) {
     //   _subscription?.cancel();
     //   await _discoveryApi.stopDiscovery();
@@ -142,6 +149,10 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
   Future<void> sendMessage(String endpoint, String data) async {
     // MessagePayload(endpoint: endpoint, data: data)
     // await _generalCharacteristic?.write(jsonEncode(MessagePayload(deviceId: )))
+  }
+
+  Stream<String>? getOnDeviceStream() {
+    return _onDeviceStream;
   }
 
   @override
@@ -173,5 +184,15 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
   @override
   void onWifiStateChanged(StateResponse state) {
     // TODO: implement onWifiStateChanged
+  }
+
+  @override
+  void onDeviceDiscovered(String deviceId) {
+    _onDeviceStreamController?.add(deviceId);
+  }
+
+  @override
+  void onDeviceLost(String deviceId) {
+    // TODO: implement onDeviceLost
   }
 }

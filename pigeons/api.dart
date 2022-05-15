@@ -72,6 +72,13 @@ abstract class DiscoveryApi {
   int stopDiscovery();
 }
 
+@FlutterApi()
+abstract class DiscoveryCallbackApi {
+  void onDeviceDiscovered(String deviceId);
+
+  void onDeviceLost(String deviceId);
+}
+
 @HostApi()
 abstract class AdvertiseApi {
   @async

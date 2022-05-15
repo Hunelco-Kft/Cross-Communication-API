@@ -116,6 +116,14 @@ NSObject<FlutterMessageCodec> *FLTDiscoveryApiGetCodec(void);
 
 extern void FLTDiscoveryApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTDiscoveryApi> *_Nullable api);
 
+/// The codec used by FLTDiscoveryCallbackApi.
+NSObject<FlutterMessageCodec> *FLTDiscoveryCallbackApiGetCodec(void);
+
+@interface FLTDiscoveryCallbackApi : NSObject
+- (instancetype)initWithBinaryMessenger:(id<FlutterBinaryMessenger>)binaryMessenger;
+- (void)onDeviceDiscoveredDeviceId:(NSString *)deviceId completion:(void(^)(NSError *_Nullable))completion;
+- (void)onDeviceLostDeviceId:(NSString *)deviceId completion:(void(^)(NSError *_Nullable))completion;
+@end
 /// The codec used by FLTAdvertiseApi.
 NSObject<FlutterMessageCodec> *FLTAdvertiseApiGetCodec(void);
 

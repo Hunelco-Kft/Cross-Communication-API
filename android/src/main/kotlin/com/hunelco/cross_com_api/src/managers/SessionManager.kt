@@ -2,6 +2,7 @@ package com.hunelco.cross_com_api.src.managers
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo
 import com.google.gson.Gson
 import com.hunelco.cross_com_api.src.models.BleDevice
 import com.hunelco.cross_com_api.src.models.ConnectedDevice
@@ -15,6 +16,7 @@ class SessionManager private constructor() {
 
     private var connectionCallback: Pigeon.ConnectionCallbackApi? = null
     private var communicationCallback: Pigeon.CommunicationCallbackApi? = null
+    private var discoveryCallbackApi: Pigeon.DiscoveryCallbackApi? = null
 
     private val _verifiedDevice = MutableLiveData<ConnectedDevice<*>?>()
     val verifiedDevice: LiveData<ConnectedDevice<*>?>
@@ -25,6 +27,7 @@ class SessionManager private constructor() {
     fun updateBinaryMessenger(binaryMessenger: BinaryMessenger?) {
         connectionCallback = Pigeon.ConnectionCallbackApi(binaryMessenger)
         communicationCallback = Pigeon.CommunicationCallbackApi(binaryMessenger)
+        discoveryCallbackApi = Pigeon.DiscoveryCallbackApi(binaryMessenger)
     }
 
     fun getConnection(id: String): ConnectedDevice<*>? = connections[id]
@@ -90,6 +93,14 @@ class SessionManager private constructor() {
             Timber.w(ex, "Couldn't serialize message. Msg: $data")
             communicationCallback?.onRawMessageReceived(deviceId, data) {}
         }
+    }
+
+    fun onDeviceDiscovered(deviceId: String) {
+        discoveryCallbackApi?.onDeviceDiscovered(deviceId){}
+    }
+
+    fun onDeviceLost(deviceId: String) {
+        discoveryCallbackApi?.onDeviceLost(deviceId){}
     }
 
     companion object {

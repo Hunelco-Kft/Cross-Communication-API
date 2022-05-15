@@ -503,6 +503,50 @@ class DiscoveryApi {
   }
 }
 
+class _DiscoveryCallbackApiCodec extends StandardMessageCodec {
+  const _DiscoveryCallbackApiCodec();
+}
+abstract class DiscoveryCallbackApi {
+  static const MessageCodec<Object?> codec = _DiscoveryCallbackApiCodec();
+
+  void onDeviceDiscovered(String deviceId);
+  void onDeviceLost(String deviceId);
+  static void setup(DiscoveryCallbackApi? api, {BinaryMessenger? binaryMessenger}) {
+    {
+      final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceDiscovered', codec, binaryMessenger: binaryMessenger);
+      if (api == null) {
+        channel.setMessageHandler(null);
+      } else {
+        channel.setMessageHandler((Object? message) async {
+          assert(message != null, 'Argument for dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceDiscovered was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final String? arg_deviceId = (args[0] as String?);
+          assert(arg_deviceId != null, 'Argument for dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceDiscovered was null, expected non-null String.');
+          api.onDeviceDiscovered(arg_deviceId!);
+          return;
+        });
+      }
+    }
+    {
+      final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceLost', codec, binaryMessenger: binaryMessenger);
+      if (api == null) {
+        channel.setMessageHandler(null);
+      } else {
+        channel.setMessageHandler((Object? message) async {
+          assert(message != null, 'Argument for dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceLost was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final String? arg_deviceId = (args[0] as String?);
+          assert(arg_deviceId != null, 'Argument for dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceLost was null, expected non-null String.');
+          api.onDeviceLost(arg_deviceId!);
+          return;
+        });
+      }
+    }
+  }
+}
+
 class _AdvertiseApiCodec extends StandardMessageCodec {
   const _AdvertiseApiCodec();
 }

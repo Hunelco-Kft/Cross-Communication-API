@@ -66,12 +66,12 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
     private val discoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, p1: DiscoveredEndpointInfo) {
             Timber.i("Nerby Endpoint discovered: $endpointId")
-            // Nothing to do here...
+            sessionManager.onDeviceDiscovered(endpointId)
         }
 
         override fun onEndpointLost(endpointId: String) {
             Timber.i("Nerby Endpoint lost: $endpointId")
-            // Nothing to do here...
+            sessionManager.onDeviceLost(endpointId)
         }
     }
 

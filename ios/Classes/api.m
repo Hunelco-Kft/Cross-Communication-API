@@ -548,6 +548,72 @@ void FLTDiscoveryApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<F
     }
   }
 }
+@interface FLTDiscoveryCallbackApiCodecReader : FlutterStandardReader
+@end
+@implementation FLTDiscoveryCallbackApiCodecReader
+@end
+
+@interface FLTDiscoveryCallbackApiCodecWriter : FlutterStandardWriter
+@end
+@implementation FLTDiscoveryCallbackApiCodecWriter
+@end
+
+@interface FLTDiscoveryCallbackApiCodecReaderWriter : FlutterStandardReaderWriter
+@end
+@implementation FLTDiscoveryCallbackApiCodecReaderWriter
+- (FlutterStandardWriter *)writerWithData:(NSMutableData *)data {
+  return [[FLTDiscoveryCallbackApiCodecWriter alloc] initWithData:data];
+}
+- (FlutterStandardReader *)readerWithData:(NSData *)data {
+  return [[FLTDiscoveryCallbackApiCodecReader alloc] initWithData:data];
+}
+@end
+
+NSObject<FlutterMessageCodec> *FLTDiscoveryCallbackApiGetCodec() {
+  static dispatch_once_t sPred = 0;
+  static FlutterStandardMessageCodec *sSharedObject = nil;
+  dispatch_once(&sPred, ^{
+    FLTDiscoveryCallbackApiCodecReaderWriter *readerWriter = [[FLTDiscoveryCallbackApiCodecReaderWriter alloc] init];
+    sSharedObject = [FlutterStandardMessageCodec codecWithReaderWriter:readerWriter];
+  });
+  return sSharedObject;
+}
+
+
+@interface FLTDiscoveryCallbackApi ()
+@property (nonatomic, strong) NSObject<FlutterBinaryMessenger> *binaryMessenger;
+@end
+
+@implementation FLTDiscoveryCallbackApi
+
+- (instancetype)initWithBinaryMessenger:(NSObject<FlutterBinaryMessenger> *)binaryMessenger {
+  self = [super init];
+  if (self) {
+    _binaryMessenger = binaryMessenger;
+  }
+  return self;
+}
+- (void)onDeviceDiscoveredDeviceId:(NSString *)arg_deviceId completion:(void(^)(NSError *_Nullable))completion {
+  FlutterBasicMessageChannel *channel =
+    [FlutterBasicMessageChannel
+      messageChannelWithName:@"dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceDiscovered"
+      binaryMessenger:self.binaryMessenger
+      codec:FLTDiscoveryCallbackApiGetCodec()];
+  [channel sendMessage:@[arg_deviceId] reply:^(id reply) {
+    completion(nil);
+  }];
+}
+- (void)onDeviceLostDeviceId:(NSString *)arg_deviceId completion:(void(^)(NSError *_Nullable))completion {
+  FlutterBasicMessageChannel *channel =
+    [FlutterBasicMessageChannel
+      messageChannelWithName:@"dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceLost"
+      binaryMessenger:self.binaryMessenger
+      codec:FLTDiscoveryCallbackApiGetCodec()];
+  [channel sendMessage:@[arg_deviceId] reply:^(id reply) {
+    completion(nil);
+  }];
+}
+@end
 @interface FLTAdvertiseApiCodecReader : FlutterStandardReader
 @end
 @implementation FLTAdvertiseApiCodecReader
