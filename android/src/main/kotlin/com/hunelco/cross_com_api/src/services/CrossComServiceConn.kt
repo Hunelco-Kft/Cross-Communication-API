@@ -8,13 +8,13 @@ import io.flutter.plugins.Pigeon
 
 interface CommunicationAPI {
     fun onSetup(
-        config: Pigeon.ServerConfig,
+        config: Pigeon.Config,
         binaryMessenger: BinaryMessenger
     )
 }
 
 class CrossComServiceConn(
-    var config: Pigeon.ServerConfig,
+    var config: Pigeon.Config,
     private val binaryMessenger: BinaryMessenger
 ) : ServiceConnection {
     private var binding: CommunicationAPI? = null

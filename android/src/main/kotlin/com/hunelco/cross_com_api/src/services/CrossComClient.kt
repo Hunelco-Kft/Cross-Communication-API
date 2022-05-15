@@ -30,26 +30,26 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
         client.config = config
     }
 
-    override fun startDiscovery(result: Pigeon.Result<Void>) {
-        if (isDiscovering.get()) return result.success(v())
+    override fun startDiscovery(result: Pigeon.Result<Long>) {
+        if (isDiscovering.get()) return result.success(0)
 
         coroutineScope.launch {
             try {
                 client.startDiscovery()
-                result.success(v())
+                result.success(0)
             } catch (ex: Exception) {
                 result.error(ex)
             }
         }
     }
 
-    override fun stopDiscovery(result: Pigeon.Result<Void>) {
-        if (!isDiscovering.get()) return result.success(v())
+    override fun stopDiscovery(result: Pigeon.Result<Long>) {
+        if (!isDiscovering.get()) return result.success(0)
 
         coroutineScope.launch {
             try {
                 client.stopDiscovery()
-                result.success(v())
+                result.success(0)
             } catch (ex: Exception) {
                 result.error(ex)
             }
@@ -58,7 +58,7 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
 
     override fun sendMessage(
         id: String, endpoint: String, payload: String,
-        result: Pigeon.Result<Void>
+        result: Pigeon.Result<Long>
     ) {
         val dataPayload = DataPayload(endpoint, payload)
         val serializedPayload = gson.toJson(dataPayload, DataPayload::class.java)
@@ -66,7 +66,7 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
         coroutineScope.launch {
             try {
                 client.sendMessage(id, serializedPayload)
-                result.success(v())
+                result.success(0)
             } catch (ex: Exception) {
                 result.error(ex)
             }
@@ -76,10 +76,10 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
     override fun sendMessageToVerifiedDevice(
         endpoint: String,
         data: String,
-        result: Pigeon.Result<Void>
+        result: Pigeon.Result<Long>
     ) {
         val verifiedDeviceId = sessionManager.verifiedDevice.value?.id
-            ?: return result.success(v())
+            ?: return result.success(0)
         return sendMessage(verifiedDeviceId, endpoint, data, result)
     }
 
@@ -90,6 +90,4 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
     }
 
     fun stopClient() = client.stopClient()
-
-    private fun v() = Void.TYPE.newInstance()
 }

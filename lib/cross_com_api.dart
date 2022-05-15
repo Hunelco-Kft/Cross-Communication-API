@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:cross_com_api/api.dart';
@@ -11,10 +10,15 @@ abstract class BaseApi {
 }
 
 // It only works on Android Server Side!
-class CrossComServerApi extends BaseApi {
+class CrossComServerApi extends BaseApi with ConnectionCallbackApi, CommunicationCallbackApi {
   final ServerApi _api = ServerApi(binaryMessenger: BaseApi._channel.binaryMessenger);
   final AdvertiseApi _advertiseApi = AdvertiseApi(binaryMessenger: BaseApi._channel.binaryMessenger);
   final CommunicationApi _commApi = CommunicationApi(binaryMessenger: BaseApi._channel.binaryMessenger);
+
+  constructor() {
+    ConnectionCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
+    CommunicationCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
+  }
 
   Future<void> startServer(
       {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) {
@@ -41,6 +45,26 @@ class CrossComServerApi extends BaseApi {
   Future<void> sendMessageToVerifiedDevice(String endpoint, String data) {
     return _commApi.sendMessageToVerifiedDevice(endpoint, data);
   }
+
+  @override
+  void onMessageReceived(DataMessage msg) {
+    // TODO: implement onMessageReceived
+  }
+
+  @override
+  void onRawMessageReceived(String deviceId, String msg) {
+    // TODO: implement onRawMessageReceived
+  }
+
+  @override
+  bool onDeviceConnected(ConnectedDevice device) {
+    return true;
+  }
+
+  @override
+  void onDeviceDisconnected(ConnectedDevice device) {
+    // TODO: implement onDeviceDisconnected
+  }
 }
 
 class CrossComClientApi extends BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, StateCallbackApi {
@@ -49,7 +73,7 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
 
   final FlutterBluePlus _flutterBlue = FlutterBluePlus.instance;
 
-  final ServerApi _api = ServerApi(binaryMessenger: BaseApi._channel.binaryMessenger);
+  final ClientApi _api = ClientApi(binaryMessenger: BaseApi._channel.binaryMessenger);
   final ConnectionApi _connectionApi = ConnectionApi(binaryMessenger: BaseApi._channel.binaryMessenger);
   final DiscoveryApi _discoveryApi = DiscoveryApi(binaryMessenger: BaseApi._channel.binaryMessenger);
   final CommunicationApi _communicationApi = CommunicationApi(binaryMessenger: BaseApi._channel.binaryMessenger);
@@ -73,25 +97,21 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
     return _api.startServer(config);
   }
 
-  Future<void> stopServer() {
-    return _api.stopServer();
-  }
-
   Future<void> startDiscovery({int timeoutInSeconds = 10000000}) async {
-    // _devices.clear();
+    _devices.clear();
 
-    // if (Platform.isAndroid) {
-    //   await _discoveryApi.startDiscovery();
-    // } else {
-    //   await _flutterBlue.startScan(
-    //       scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [serviceUuid], timeout: Duration(seconds: timeoutInSeconds));
-    //   _subscription = _flutterBlue.scanResults.listen((results) {
-    //     for (ScanResult r in results) {
-    //       _devices[r.device.id.id] = ConnectedDevice(deviceId: r.device.id.id, provider: Provider.gatt);
-    //       // TODO: Stream adatfolyam behívása
-    //     }
-    //   });
-    // }
+    if (Platform.isAndroid) {
+      await _discoveryApi.startDiscovery();
+    } else {
+      await _flutterBlue.startScan(
+          scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [serviceUuid], timeout: Duration(seconds: timeoutInSeconds));
+      _subscription = _flutterBlue.scanResults.listen((results) {
+        for (ScanResult r in results) {
+          _devices[r.device.id.id] = ConnectedDevice(deviceId: r.device.id.id, provider: Provider.gatt);
+          // TODO: Stream adatfolyam behívása
+        }
+      });
+    }
   }
 
   Future<void> stopDiscovery() async {

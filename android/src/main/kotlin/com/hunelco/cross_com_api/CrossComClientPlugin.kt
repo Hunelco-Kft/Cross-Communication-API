@@ -12,7 +12,7 @@ import timber.log.Timber
 import kotlin.system.exitProcess
 
 /** CrossComClientPlugin */
-class CrossComClientPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi {
+class CrossComClientPlugin : FlutterPlugin, ActivityAware, Pigeon.ClientApi {
     private var binding: ActivityPluginBinding? = null
     private var binaryMessenger: BinaryMessenger? = null
 
@@ -24,11 +24,12 @@ class CrossComClientPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi {
         if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
 
         binaryMessenger = binding.binaryMessenger
-
-        Pigeon.ServerApi.setup(binaryMessenger, this)
+        Pigeon.ClientApi.setup(binaryMessenger, this)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        this.binding = binding
+
         permissionHelper = PermissionHelper(binding.activity)
         permissionHelper!!.let {
             binding.addActivityResultListener(it)
@@ -56,19 +57,19 @@ class CrossComClientPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi {
     }
 
     override fun startServer(config: Pigeon.Config) {
-        if (permissionHelper?.hasAllPermissions() != true) {
-            permissionHelper?.requestAllPermissions()
-            return
-        }
-
-        val activity = binding!!.activity
-        stopServer()
-
-        crossComClient = CrossComClient(activity, config)
-        crossComClient!!.updateBinaryMessenger(binaryMessenger!!)
+//        if (permissionHelper?.hasAllPermissions() != true) {
+//            permissionHelper?.requestAllPermissions()
+//            return
+//        }
+//
+//        val activity = binding!!.activity
+//        stopServer()
+//
+//        crossComClient = CrossComClient(activity, config)
+//        crossComClient!!.updateBinaryMessenger(binaryMessenger!!)
     }
 
-    override fun stopServer() {
+    fun stopServer() {
         crossComClient?.stopClient()
         crossComClient = null
     }

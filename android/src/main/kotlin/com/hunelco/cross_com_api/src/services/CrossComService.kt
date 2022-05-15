@@ -24,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
 const val NOTIFICATION_ID = 101
@@ -108,9 +109,9 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
             cm.registerDefaultNetworkCallback(connectivityObserver)
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY
+    override fun onStartCommand(intent: Intent, flags: Int, startId: Int) = START_STICKY
 
-    override fun onBind(p0: Intent?): IBinder = DataPlane()
+    override fun onBind(p0: Intent): IBinder = DataPlane()
 
     override fun onDestroy() {
         stopAdvertise(null)
@@ -122,9 +123,9 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         super.onDestroy()
     }
 
-    override fun startAdvertise(result: Pigeon.Result<Void>?) {
+    override fun startAdvertise(result: Pigeon.Result<Long>?) {
         if (isAdvertising.get()) {
-            result?.success(v())
+            result?.success(0)
             return
         }
 
@@ -135,16 +136,17 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
                 nearbyManager?.startAdvertise()
 
                 isAdvertising.set(true)
-                result?.success(v())
+                result?.success(0)
             } catch (ex: Exception) {
+                Timber.e("STAET ERR ")
                 result?.error(ex)
             }
         }
     }
 
-    override fun stopAdvertise(result: Pigeon.Result<Void>?) {
+    override fun stopAdvertise(result: Pigeon.Result<Long>?) {
         if (!isAdvertising.get()) {
-            result?.success(v())
+            result?.success(0)
             return
         }
 
@@ -156,7 +158,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
                 nearbyManager?.stopAdvertise()
 
                 isAdvertising.set(false)
-                result?.success(v())
+                result?.success(0)
             } catch (ex: Exception) {
                 result?.error(ex)
             }
@@ -165,7 +167,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
 
     override fun sendMessage(
         id: String, endpoint: String, payload: String,
-        result: Pigeon.Result<Void>
+        result: Pigeon.Result<Long>
     ) {
         val dataPayload = DataPayload(endpoint, payload)
         val serializedPayload = gson.toJson(dataPayload, DataPayload::class.java)
@@ -174,7 +176,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
             try {
                 gattManager?.sendMessage(id, serializedPayload)
                 nearbyManager?.sendMessage(id, serializedPayload)
-                result.success(v())
+                result.success(0)
             } catch (ex: Exception) {
                 result.error(ex)
             }
@@ -184,14 +186,12 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
     override fun sendMessageToVerifiedDevice(
         endpoint: String,
         data: String,
-        result: Pigeon.Result<Void>
+        result: Pigeon.Result<Long>
     ) {
-        val verifiedDeviceId = sessionManager?.verifiedDevice?.value?.id
-            ?: return result.success(v())
+        val verifiedDeviceId = sessionManager.verifiedDevice.value?.id
+            ?: return result.success(0)
         return sendMessage(verifiedDeviceId, endpoint, data, result)
     }
-
-    private fun v() = Void.TYPE.newInstance()
 
     /**
      * Functionality available to clients
@@ -205,6 +205,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
             stateCallbackApi = Pigeon.StateCallbackApi(binaryMessenger)
 
             Pigeon.CommunicationApi.setup(binaryMessenger, this@CrossComService)
+            Pigeon.AdvertiseApi.setup(binaryMessenger, this@CrossComService)
         }
     }
 }

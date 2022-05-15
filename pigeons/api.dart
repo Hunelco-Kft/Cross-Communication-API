@@ -43,12 +43,17 @@ abstract class ServerApi {
 }
 
 @HostApi()
+abstract class ClientApi {
+  void startServer(Config config);
+}
+
+@HostApi()
 abstract class ConnectionApi {
   @async
   ConnectedDevice connect(String endpointId, String displayName);
 
   @async
-  void disconnect(String id);
+  int disconnect(String id);
 }
 
 @FlutterApi()
@@ -61,28 +66,28 @@ abstract class ConnectionCallbackApi {
 @HostApi()
 abstract class DiscoveryApi {
   @async
-  void startDiscovery();
+  int startDiscovery();
 
   @async
-  void stopDiscovery();
+  int stopDiscovery();
 }
 
 @HostApi()
 abstract class AdvertiseApi {
   @async
-  void startAdvertise();
+  int startAdvertise();
 
   @async
-  void stopAdvertise();
+  int stopAdvertise();
 }
 
 @HostApi()
 abstract class CommunicationApi {
   @async
-  void sendMessage(String toDeviceId, String endpoint, String payload);
+  int sendMessage(String toDeviceId, String endpoint, String payload);
 
   @async
-  void sendMessageToVerifiedDevice(String endpoint, String data);
+  int sendMessageToVerifiedDevice(String endpoint, String data);
 }
 
 @FlutterApi()

@@ -221,6 +221,64 @@ class ServerApi {
   }
 }
 
+class _ClientApiCodec extends StandardMessageCodec {
+  const _ClientApiCodec();
+  @override
+  void writeValue(WriteBuffer buffer, Object? value) {
+    if (value is Config) {
+      buffer.putUint8(128);
+      writeValue(buffer, value.encode());
+    } else 
+{
+      super.writeValue(buffer, value);
+    }
+  }
+  @override
+  Object? readValueOfType(int type, ReadBuffer buffer) {
+    switch (type) {
+      case 128:       
+        return Config.decode(readValue(buffer)!);
+      
+      default:      
+        return super.readValueOfType(type, buffer);
+      
+    }
+  }
+}
+
+class ClientApi {
+  /// Constructor for [ClientApi].  The [binaryMessenger] named argument is
+  /// available for dependency injection.  If it is left null, the default
+  /// BinaryMessenger will be used which routes to the host platform.
+  ClientApi({BinaryMessenger? binaryMessenger}) : _binaryMessenger = binaryMessenger;
+
+  final BinaryMessenger? _binaryMessenger;
+
+  static const MessageCodec<Object?> codec = _ClientApiCodec();
+
+  Future<void> startServer(Config arg_config) async {
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+        'dev.flutter.pigeon.ClientApi.startServer', codec, binaryMessenger: _binaryMessenger);
+    final Map<Object?, Object?>? replyMap =
+        await channel.send(<Object>[arg_config]) as Map<Object?, Object?>?;
+    if (replyMap == null) {
+      throw PlatformException(
+        code: 'channel-error',
+        message: 'Unable to establish connection on channel.',
+      );
+    } else if (replyMap['error'] != null) {
+      final Map<Object?, Object?> error = (replyMap['error'] as Map<Object?, Object?>?)!;
+      throw PlatformException(
+        code: (error['code'] as String?)!,
+        message: error['message'] as String?,
+        details: error['details'],
+      );
+    } else {
+      return;
+    }
+  }
+}
+
 class _ConnectionApiCodec extends StandardMessageCodec {
   const _ConnectionApiCodec();
   @override
@@ -283,7 +341,7 @@ class ConnectionApi {
     }
   }
 
-  Future<void> disconnect(String arg_id) async {
+  Future<int> disconnect(String arg_id) async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.ConnectionApi.disconnect', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
@@ -300,8 +358,13 @@ class ConnectionApi {
         message: error['message'] as String?,
         details: error['details'],
       );
+    } else if (replyMap['result'] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
     } else {
-      return;
+      return (replyMap['result'] as int?)!;
     }
   }
 }
@@ -385,7 +448,7 @@ class DiscoveryApi {
 
   static const MessageCodec<Object?> codec = _DiscoveryApiCodec();
 
-  Future<void> startDiscovery() async {
+  Future<int> startDiscovery() async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.DiscoveryApi.startDiscovery', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
@@ -402,12 +465,17 @@ class DiscoveryApi {
         message: error['message'] as String?,
         details: error['details'],
       );
+    } else if (replyMap['result'] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
     } else {
-      return;
+      return (replyMap['result'] as int?)!;
     }
   }
 
-  Future<void> stopDiscovery() async {
+  Future<int> stopDiscovery() async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.DiscoveryApi.stopDiscovery', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
@@ -424,8 +492,13 @@ class DiscoveryApi {
         message: error['message'] as String?,
         details: error['details'],
       );
+    } else if (replyMap['result'] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
     } else {
-      return;
+      return (replyMap['result'] as int?)!;
     }
   }
 }
@@ -444,7 +517,7 @@ class AdvertiseApi {
 
   static const MessageCodec<Object?> codec = _AdvertiseApiCodec();
 
-  Future<void> startAdvertise() async {
+  Future<int> startAdvertise() async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.AdvertiseApi.startAdvertise', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
@@ -461,12 +534,17 @@ class AdvertiseApi {
         message: error['message'] as String?,
         details: error['details'],
       );
+    } else if (replyMap['result'] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
     } else {
-      return;
+      return (replyMap['result'] as int?)!;
     }
   }
 
-  Future<void> stopAdvertise() async {
+  Future<int> stopAdvertise() async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.AdvertiseApi.stopAdvertise', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
@@ -483,8 +561,13 @@ class AdvertiseApi {
         message: error['message'] as String?,
         details: error['details'],
       );
+    } else if (replyMap['result'] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
     } else {
-      return;
+      return (replyMap['result'] as int?)!;
     }
   }
 }
@@ -503,7 +586,7 @@ class CommunicationApi {
 
   static const MessageCodec<Object?> codec = _CommunicationApiCodec();
 
-  Future<void> sendMessage(String arg_toDeviceId, String arg_endpoint, String arg_payload) async {
+  Future<int> sendMessage(String arg_toDeviceId, String arg_endpoint, String arg_payload) async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.CommunicationApi.sendMessage', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
@@ -520,12 +603,17 @@ class CommunicationApi {
         message: error['message'] as String?,
         details: error['details'],
       );
+    } else if (replyMap['result'] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
     } else {
-      return;
+      return (replyMap['result'] as int?)!;
     }
   }
 
-  Future<void> sendMessageToVerifiedDevice(String arg_endpoint, String arg_data) async {
+  Future<int> sendMessageToVerifiedDevice(String arg_endpoint, String arg_data) async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.CommunicationApi.sendMessageToVerifiedDevice', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
@@ -542,8 +630,13 @@ class CommunicationApi {
         message: error['message'] as String?,
         details: error['details'],
       );
+    } else if (replyMap['result'] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
     } else {
-      return;
+      return (replyMap['result'] as int?)!;
     }
   }
 }

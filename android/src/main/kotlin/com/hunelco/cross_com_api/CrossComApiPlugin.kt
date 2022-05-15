@@ -2,6 +2,7 @@ package com.hunelco.cross_com_api
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.view.WindowManager
 import com.hunelco.cross_com_api.src.services.CrossComService
 import com.hunelco.cross_com_api.src.services.CrossComServiceConn
@@ -35,6 +36,8 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi {
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        this.binding = binding
+
         NotificationUtils.createChannels(binding.activity)
         intent = Intent(binding.activity, CrossComService::class.java)
 

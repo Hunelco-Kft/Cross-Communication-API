@@ -65,10 +65,12 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
     }
     private val discoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, p1: DiscoveredEndpointInfo) {
+            Timber.i("Nerby Endpoint discovered: $endpointId")
             // Nothing to do here...
         }
 
         override fun onEndpointLost(endpointId: String) {
+            Timber.i("Nerby Endpoint lost: $endpointId")
             // Nothing to do here...
         }
     }
@@ -94,9 +96,10 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
             }
     }
 
-    override fun disconnect(endpointId: String, result: Pigeon.Result<Void>) {
+    override fun disconnect(endpointId: String, result: Pigeon.Result<Long>) {
         connectionsClient.disconnectFromEndpoint(endpointId)
         Timber.i("Disconnected from $endpointId")
+        result.success(0)
     }
 
     suspend fun startDiscovery() {

@@ -219,6 +219,81 @@ void FLTServerApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTS
     }
   }
 }
+@interface FLTClientApiCodecReader : FlutterStandardReader
+@end
+@implementation FLTClientApiCodecReader
+- (nullable id)readValueOfType:(UInt8)type 
+{
+  switch (type) {
+    case 128:     
+      return [FLTConfig fromMap:[self readValue]];
+    
+    default:    
+      return [super readValueOfType:type];
+    
+  }
+}
+@end
+
+@interface FLTClientApiCodecWriter : FlutterStandardWriter
+@end
+@implementation FLTClientApiCodecWriter
+- (void)writeValue:(id)value 
+{
+  if ([value isKindOfClass:[FLTConfig class]]) {
+    [self writeByte:128];
+    [self writeValue:[value toMap]];
+  } else 
+{
+    [super writeValue:value];
+  }
+}
+@end
+
+@interface FLTClientApiCodecReaderWriter : FlutterStandardReaderWriter
+@end
+@implementation FLTClientApiCodecReaderWriter
+- (FlutterStandardWriter *)writerWithData:(NSMutableData *)data {
+  return [[FLTClientApiCodecWriter alloc] initWithData:data];
+}
+- (FlutterStandardReader *)readerWithData:(NSData *)data {
+  return [[FLTClientApiCodecReader alloc] initWithData:data];
+}
+@end
+
+NSObject<FlutterMessageCodec> *FLTClientApiGetCodec() {
+  static dispatch_once_t sPred = 0;
+  static FlutterStandardMessageCodec *sSharedObject = nil;
+  dispatch_once(&sPred, ^{
+    FLTClientApiCodecReaderWriter *readerWriter = [[FLTClientApiCodecReaderWriter alloc] init];
+    sSharedObject = [FlutterStandardMessageCodec codecWithReaderWriter:readerWriter];
+  });
+  return sSharedObject;
+}
+
+
+void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTClientApi> *api) {
+  {
+    FlutterBasicMessageChannel *channel =
+      [FlutterBasicMessageChannel
+        messageChannelWithName:@"dev.flutter.pigeon.ClientApi.startServer"
+        binaryMessenger:binaryMessenger
+        codec:FLTClientApiGetCodec()];
+    if (api) {
+      NSCAssert([api respondsToSelector:@selector(startServerConfig:error:)], @"FLTClientApi api (%@) doesn't respond to @selector(startServerConfig:error:)", api);
+      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
+        NSArray *args = message;
+        FLTConfig *arg_config = args[0];
+        FlutterError *error;
+        [api startServerConfig:arg_config error:&error];
+        callback(wrapResult(nil, error));
+      }];
+    }
+    else {
+      [channel setMessageHandler:nil];
+    }
+  }
+}
 @interface FLTConnectionApiCodecReader : FlutterStandardReader
 @end
 @implementation FLTConnectionApiCodecReader
@@ -305,8 +380,8 @@ void FLTConnectionApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
         NSArray *args = message;
         NSString *arg_id = args[0];
-        [api disconnectId:arg_id completion:^(FlutterError *_Nullable error) {
-          callback(wrapResult(nil, error));
+        [api disconnectId:arg_id completion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+          callback(wrapResult(output, error));
         }];
       }];
     }
@@ -445,8 +520,8 @@ void FLTDiscoveryApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<F
     if (api) {
       NSCAssert([api respondsToSelector:@selector(startDiscoveryWithCompletion:)], @"FLTDiscoveryApi api (%@) doesn't respond to @selector(startDiscoveryWithCompletion:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        [api startDiscoveryWithCompletion:^(FlutterError *_Nullable error) {
-          callback(wrapResult(nil, error));
+        [api startDiscoveryWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+          callback(wrapResult(output, error));
         }];
       }];
     }
@@ -463,8 +538,8 @@ void FLTDiscoveryApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<F
     if (api) {
       NSCAssert([api respondsToSelector:@selector(stopDiscoveryWithCompletion:)], @"FLTDiscoveryApi api (%@) doesn't respond to @selector(stopDiscoveryWithCompletion:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        [api stopDiscoveryWithCompletion:^(FlutterError *_Nullable error) {
-          callback(wrapResult(nil, error));
+        [api stopDiscoveryWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+          callback(wrapResult(output, error));
         }];
       }];
     }
@@ -515,8 +590,8 @@ void FLTAdvertiseApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<F
     if (api) {
       NSCAssert([api respondsToSelector:@selector(startAdvertiseWithCompletion:)], @"FLTAdvertiseApi api (%@) doesn't respond to @selector(startAdvertiseWithCompletion:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        [api startAdvertiseWithCompletion:^(FlutterError *_Nullable error) {
-          callback(wrapResult(nil, error));
+        [api startAdvertiseWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+          callback(wrapResult(output, error));
         }];
       }];
     }
@@ -533,8 +608,8 @@ void FLTAdvertiseApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<F
     if (api) {
       NSCAssert([api respondsToSelector:@selector(stopAdvertiseWithCompletion:)], @"FLTAdvertiseApi api (%@) doesn't respond to @selector(stopAdvertiseWithCompletion:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        [api stopAdvertiseWithCompletion:^(FlutterError *_Nullable error) {
-          callback(wrapResult(nil, error));
+        [api stopAdvertiseWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+          callback(wrapResult(output, error));
         }];
       }];
     }
@@ -589,8 +664,8 @@ void FLTCommunicationApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObje
         NSString *arg_toDeviceId = args[0];
         NSString *arg_endpoint = args[1];
         NSString *arg_payload = args[2];
-        [api sendMessageToDeviceId:arg_toDeviceId endpoint:arg_endpoint payload:arg_payload completion:^(FlutterError *_Nullable error) {
-          callback(wrapResult(nil, error));
+        [api sendMessageToDeviceId:arg_toDeviceId endpoint:arg_endpoint payload:arg_payload completion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+          callback(wrapResult(output, error));
         }];
       }];
     }
@@ -610,8 +685,8 @@ void FLTCommunicationApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObje
         NSArray *args = message;
         NSString *arg_endpoint = args[0];
         NSString *arg_data = args[1];
-        [api sendMessageToVerifiedDeviceEndpoint:arg_endpoint data:arg_data completion:^(FlutterError *_Nullable error) {
-          callback(wrapResult(nil, error));
+        [api sendMessageToVerifiedDeviceEndpoint:arg_endpoint data:arg_data completion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+          callback(wrapResult(output, error));
         }];
       }];
     }

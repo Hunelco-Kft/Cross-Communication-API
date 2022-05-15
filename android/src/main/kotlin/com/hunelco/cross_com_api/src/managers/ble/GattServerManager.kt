@@ -51,11 +51,9 @@ class GattServerManager private constructor(private val context: Context) :
 
     private val bleAdvertiseCallback = BleAdvertiser.Callback(context)
 
-    init {
-        bluetoothAdapter.name = config!!.name
-    }
-
     override fun initializeServer(): MutableList<BluetoothGattService> {
+        bluetoothAdapter.name = config!!.name
+
         setServerObserver(this)
         return gattServices
     }
@@ -104,7 +102,7 @@ class GattServerManager private constructor(private val context: Context) :
         init {
             setWriteCallback(generalGattCharacteristic)
                 .merge(LargeDataMerger(GeneralProfile.MAX_MSG_SIZE, this))
-                .with { device, data -> {}
+                .with { device, data ->
                     sessionManager.onMessage(
                         device.address, Pigeon.Provider.gatt, data.getStringValue(0) ?: ""
                     )
