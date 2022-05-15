@@ -96,6 +96,7 @@ class SessionManager private constructor() {
     }
 
     fun onDeviceDiscovered(deviceId: String) {
+        Timber.i("Nerby Endpoint discovered -> SessionManager: $deviceId ${discoveryCallbackApi == null}")
         discoveryCallbackApi?.onDeviceDiscovered(deviceId){}
     }
 

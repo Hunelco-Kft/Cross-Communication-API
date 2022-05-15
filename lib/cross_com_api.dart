@@ -88,6 +88,9 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
   StreamController<String>? _onDeviceStreamController;
   Stream<String>? _onDeviceStream;
 
+  StreamController<DataMessage>? _onMessageStreamController;
+  Stream<DataMessage>? _onMessageStream;
+
   constructor() {
     ConnectionCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
     CommunicationCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
@@ -122,37 +125,44 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
   Future<void> stopDiscovery() async {
     _onDeviceStreamController?.close(); // TODO
 
-    // if (Platform.isAndroid) {
-    //   _subscription?.cancel();
-    //   await _discoveryApi.stopDiscovery();
-    // } else {
-    //   await _flutterBlue.stopScan();
-    // }
+    if (Platform.isAndroid) {
+      _subscription?.cancel();
+      await _discoveryApi.stopDiscovery();
+    } else {
+      await _flutterBlue.stopScan();
+    }
   }
 
   Future<void> connectToDevice(String connectToDeviceid) async {
-    // if (Platform.isAndroid) {
-    //   await _connectionApi.connect(connectToDeviceid, "DEVICE");
-    // } else {
-    //   await _flutterBlue.stopScan();
-    // }
+    print('connectToDevice $connectToDeviceid');
+    if (Platform.isAndroid) {
+      await _connectionApi.connect(connectToDeviceid, "DEVICE");
+      _onMessageStreamController = StreamController<DataMessage>();
+      _onMessageStream = _onMessageStreamController?.stream;
+    } else {
+      await _flutterBlue.stopScan();
+    }
   }
 
   Future<void> disconnectFromDevice(String id) async {
-    //  if (Platform.isAndroid) {
-    //   await _connectionApi.disconnect(id);
-    // } else {
-    //   await _flutterBlue.stopScan();
-    // }
+    if (Platform.isAndroid) {
+      await _connectionApi.disconnect(id);
+    } else {
+      await _flutterBlue.stopScan();
+    }
   }
 
   Future<void> sendMessage(String endpoint, String data) async {
-    // MessagePayload(endpoint: endpoint, data: data)
-    // await _generalCharacteristic?.write(jsonEncode(MessagePayload(deviceId: )))
+    //final message = MessagePayload(endpoint: endpoint, data: data);
+    //await _generalCharacteristic?.write(jsonEncode(message));
   }
 
   Stream<String>? getOnDeviceStream() {
     return _onDeviceStream;
+  }
+
+  Stream<DataMessage>? getOnMessageStream() {
+    return _onMessageStream;
   }
 
   @override
@@ -173,7 +183,7 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
 
   @override
   void onMessageReceived(DataMessage msg) {
-    // TODO: implement onMessageReceived
+    _onMessageStreamController?.add(msg);
   }
 
   @override
@@ -188,6 +198,7 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
 
   @override
   void onDeviceDiscovered(String deviceId) {
+    print("Nerby Endpoint discovered -> CrossApi: $deviceId");
     _onDeviceStreamController?.add(deviceId);
   }
 
