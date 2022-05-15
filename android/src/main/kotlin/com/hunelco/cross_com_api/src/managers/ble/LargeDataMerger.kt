@@ -1,5 +1,6 @@
 package com.hunelco.cross_com_api.src.managers.ble
 
+import com.hunelco.cross_com_api.src.utils.MessageUtils
 import no.nordicsemi.android.ble.data.DataMerger
 import no.nordicsemi.android.ble.data.DataStream
 
@@ -15,7 +16,7 @@ class LargeDataMerger(
 
         buffer += lastPacket!!
         stringBuffer += String(lastPacket)
-        if (stringBuffer.endsWith(EOF)) {
+        if (stringBuffer.endsWith(MessageUtils.EOF)) {
             buffer = buffer.copyOfRange(0, buffer.size - EOFInSize)
             checkSize()
 
@@ -39,7 +40,6 @@ class LargeDataMerger(
     }
 
     companion object {
-        val EOF = "<<<EOF>>>"
-        val EOFInSize = EOF.toByteArray().size
+        val EOFInSize = MessageUtils.EOF.toByteArray().size
     }
 }
