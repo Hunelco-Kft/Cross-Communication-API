@@ -80,7 +80,7 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
         name: String,
         result: Pigeon.Result<Pigeon.ConnectedDevice>
     ) {
-        connectionsClient.requestConnection(endpointId, name, connectionCallback)
+        connectionsClient.requestConnection(name, endpointId, connectionCallback)
             .addOnSuccessListener {
                 Timber.i("Connected to $endpointId")
                 val device = Pigeon.ConnectedDevice.Builder()
@@ -129,6 +129,7 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
         if (!isDiscovering.get()) return
 
         connectionsClient.stopDiscovery()
+        connectionsClient.stopAllEndpoints()
         isDiscovering.set(false)
     }
 

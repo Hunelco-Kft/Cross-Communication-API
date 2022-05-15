@@ -95,6 +95,7 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
     ConnectionCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
     CommunicationCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
     StateCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
+    DiscoveryCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
   }
 
   Future<void> startServer(
