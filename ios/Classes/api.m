@@ -276,16 +276,16 @@ void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTC
   {
     FlutterBasicMessageChannel *channel =
       [FlutterBasicMessageChannel
-        messageChannelWithName:@"dev.flutter.pigeon.ClientApi.startServer"
+        messageChannelWithName:@"dev.flutter.pigeon.ClientApi.startClient"
         binaryMessenger:binaryMessenger
         codec:FLTClientApiGetCodec()];
     if (api) {
-      NSCAssert([api respondsToSelector:@selector(startServerConfig:error:)], @"FLTClientApi api (%@) doesn't respond to @selector(startServerConfig:error:)", api);
+      NSCAssert([api respondsToSelector:@selector(startClientConfig:error:)], @"FLTClientApi api (%@) doesn't respond to @selector(startClientConfig:error:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
         NSArray *args = message;
         FLTConfig *arg_config = args[0];
         FlutterError *error;
-        [api startServerConfig:arg_config error:&error];
+        [api startClientConfig:arg_config error:&error];
         callback(wrapResult(nil, error));
       }];
     }

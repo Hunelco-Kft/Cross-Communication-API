@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import android.view.WindowManager
+import com.hunelco.cross_com_api.src.services.CrossComClient
 import com.hunelco.cross_com_api.src.services.CrossComService
 import com.hunelco.cross_com_api.src.services.CrossComServiceConn
 import com.hunelco.cross_com_api.src.utils.NotificationUtils
@@ -18,13 +19,14 @@ import timber.log.Timber
 import kotlin.system.exitProcess
 
 /** CrossComApiPlugin */
-class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi {
+class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon.ClientApi {
     private var binding: ActivityPluginBinding? = null
     private var binaryMessenger: BinaryMessenger? = null
 
     private var permissionHelper: PermissionHelper? = null
 
     private var serviceConnection: CrossComServiceConn? = null
+    private var crossComClient: CrossComClient? = null
 
     private lateinit var intent: Intent
 
@@ -33,6 +35,7 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi {
 
         binaryMessenger = binding.binaryMessenger
         Pigeon.ServerApi.setup(binaryMessenger, this)
+        Pigeon.ClientApi.setup(binaryMessenger, this)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -54,6 +57,8 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi {
 
     override fun onDetachedFromActivity() {
         if (serviceConnection != null) binding?.activity?.unbindService(serviceConnection!!)
+        crossComClient?.stopClient()
+        crossComClient = null
 
         permissionHelper?.let {
             binding?.removeRequestPermissionsResultListener(it)
@@ -76,11 +81,27 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi {
         val activity = binding!!.activity
         activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        crossComClient?.stopClient()
+        crossComClient = null
+
         val serviceConn = CrossComServiceConn(config, binaryMessenger!!)
         serviceConn.config = config
 
         if (binding?.activity?.bindService(intent, serviceConn, Context.BIND_AUTO_CREATE) == true)
             serviceConnection = serviceConn
+    }
+
+    override fun startClient(config: Pigeon.Config) {
+        if (permissionHelper?.hasAllPermissions() != true) {
+            permissionHelper?.requestAllPermissions()
+            return
+        }
+
+        val activity = binding!!.activity
+        stopServer()
+
+        crossComClient = CrossComClient(activity, config)
+        crossComClient!!.updateBinaryMessenger(binaryMessenger!!)
     }
 
     override fun stopServer() {

@@ -17,6 +17,7 @@ import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.ble.GattServerManager
 import com.hunelco.cross_com_api.src.managers.nearby.NearbyServerManager
 import com.hunelco.cross_com_api.src.models.DataPayload
+import com.hunelco.cross_com_api.src.utils.MessageUtils
 import com.hunelco.cross_com_api.src.utils.NotificationUtils
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugins.Pigeon
@@ -170,7 +171,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         result: Pigeon.Result<Long>
     ) {
         val dataPayload = DataPayload(endpoint, payload)
-        val serializedPayload = gson.toJson(dataPayload, DataPayload::class.java)
+        val serializedPayload = MessageUtils.addEOF(gson.toJson(dataPayload, DataPayload::class.java))
 
         coroutineScope.launch {
             try {

@@ -256,9 +256,9 @@ class ClientApi {
 
   static const MessageCodec<Object?> codec = _ClientApiCodec();
 
-  Future<void> startServer(Config arg_config) async {
+  Future<void> startClient(Config arg_config) async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-        'dev.flutter.pigeon.ClientApi.startServer', codec, binaryMessenger: _binaryMessenger);
+        'dev.flutter.pigeon.ClientApi.startClient', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
         await channel.send(<Object>[arg_config]) as Map<Object?, Object?>?;
     if (replyMap == null) {
