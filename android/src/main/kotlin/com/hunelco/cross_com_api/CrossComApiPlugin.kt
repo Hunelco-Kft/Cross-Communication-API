@@ -72,7 +72,7 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon
         exitProcess(0)
     }
 
-    override fun startServer(config: Pigeon.Config) {
+    override fun startServer(config: Pigeon.Config, result: Pigeon.Result<Long>) {
         if (permissionHelper?.hasAllPermissions() != true) {
             permissionHelper?.requestAllPermissions()
             return
@@ -84,7 +84,7 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon
         crossComClient?.stopClient()
         crossComClient = null
 
-        val serviceConn = CrossComServiceConn(config, binaryMessenger!!)
+        val serviceConn = CrossComServiceConn(config, binaryMessenger!!, result)
         serviceConn.config = config
 
         if (binding?.activity?.bindService(

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import com.google.android.gms.nearby.connection.AdvertisingOptions
 import com.hunelco.cross_com_api.src.managers.nearby.profiles.GeneralNearbyProfile
+import io.flutter.plugins.Pigeon
 import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -33,6 +34,11 @@ class NearbyServerManager private constructor(context: Context) : NearbyClientMa
     fun stopAdvertise() {
         connectionsClient.stopAdvertising()
         Timber.i("Stop advertising - NearbyServerManager")
+    }
+
+    override fun reset(result: Pigeon.Result<Long>) {
+        stopAdvertise()
+        super.reset(result)
     }
 
     companion object {

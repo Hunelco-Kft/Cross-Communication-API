@@ -308,7 +308,7 @@ public class Pigeon {
 
   /** Generated interface from Pigeon that represents a handler of messages from Flutter.*/
   public interface ServerApi {
-    @NonNull void startServer(Config config);
+    void startServer(Config config, Result<Long> result);
     @NonNull void stopServer();
 
     /** The codec used by ServerApi. */
@@ -330,13 +330,23 @@ public class Pigeon {
               if (configArg == null) {
                 throw new NullPointerException("configArg unexpectedly null.");
               }
-              api.startServer(configArg);
-              wrapped.put("result", null);
+              Result<Long> resultCallback = new Result<Long>() {
+                public void success(Long result) {
+                  wrapped.put("result", result);
+                  reply.reply(wrapped);
+                }
+                public void error(Throwable error) {
+                  wrapped.put("error", wrapError(error));
+                  reply.reply(wrapped);
+                }
+              };
+
+              api.startServer(configArg, resultCallback);
             }
             catch (Error | RuntimeException exception) {
               wrapped.put("error", wrapError(exception));
+              reply.reply(wrapped);
             }
-            reply.reply(wrapped);
           });
         } else {
           channel.setMessageHandler(null);
@@ -456,6 +466,7 @@ public class Pigeon {
   public interface ConnectionApi {
     void connect(String endpointId, String displayName, Result<ConnectedDevice> result);
     void disconnect(String id, Result<Long> result);
+    void reset(Result<Long> result);
 
     /** The codec used by ConnectionApi. */
     static MessageCodec<Object> getCodec() {
@@ -526,6 +537,35 @@ public class Pigeon {
               };
 
               api.disconnect(idArg, resultCallback);
+            }
+            catch (Error | RuntimeException exception) {
+              wrapped.put("error", wrapError(exception));
+              reply.reply(wrapped);
+            }
+          });
+        } else {
+          channel.setMessageHandler(null);
+        }
+      }
+      {
+        BasicMessageChannel<Object> channel =
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ConnectionApi.reset", getCodec());
+        if (api != null) {
+          channel.setMessageHandler((message, reply) -> {
+            Map<String, Object> wrapped = new HashMap<>();
+            try {
+              Result<Long> resultCallback = new Result<Long>() {
+                public void success(Long result) {
+                  wrapped.put("result", result);
+                  reply.reply(wrapped);
+                }
+                public void error(Throwable error) {
+                  wrapped.put("error", wrapError(error));
+                  reply.reply(wrapped);
+                }
+              };
+
+              api.reset(resultCallback);
             }
             catch (Error | RuntimeException exception) {
               wrapped.put("error", wrapError(exception));

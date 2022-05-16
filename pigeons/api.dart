@@ -37,7 +37,8 @@ class StateResponse {
 @HostApi()
 abstract class ServerApi {
   // It starts the server if it is not started yet as a foreground service
-  void startServer(Config config);
+  @async
+  int startServer(Config config);
 
   void stopServer();
 }
@@ -54,6 +55,9 @@ abstract class ConnectionApi {
 
   @async
   int disconnect(String id);
+
+  @async
+  int reset();
 }
 
 @FlutterApi()

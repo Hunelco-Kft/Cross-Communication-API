@@ -67,7 +67,7 @@ NSObject<FlutterMessageCodec> *FLTServerApiGetCodec(void);
 
 @protocol FLTServerApi
 /// @return `nil` only when `error != nil`.
-- (void)startServerConfig:(FLTConfig *)config error:(FlutterError *_Nullable *_Nonnull)error;
+- (void)startServerConfig:(nullable FLTConfig *)config completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 /// @return `nil` only when `error != nil`.
 - (void)stopServerWithError:(FlutterError *_Nullable *_Nonnull)error;
 @end
@@ -92,6 +92,8 @@ NSObject<FlutterMessageCodec> *FLTConnectionApiGetCodec(void);
 - (void)connectEndpointId:(nullable NSString *)endpointId displayName:(nullable NSString *)displayName completion:(void(^)(FLTConnectedDevice *_Nullable, FlutterError *_Nullable))completion;
 /// @return `nil` only when `error != nil`.
 - (void)disconnectId:(nullable NSString *)id completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
+/// @return `nil` only when `error != nil`.
+- (void)resetWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 @end
 
 extern void FLTConnectionApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTConnectionApi> *_Nullable api);

@@ -187,13 +187,13 @@ void FLTServerApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTS
         binaryMessenger:binaryMessenger
         codec:FLTServerApiGetCodec()];
     if (api) {
-      NSCAssert([api respondsToSelector:@selector(startServerConfig:error:)], @"FLTServerApi api (%@) doesn't respond to @selector(startServerConfig:error:)", api);
+      NSCAssert([api respondsToSelector:@selector(startServerConfig:completion:)], @"FLTServerApi api (%@) doesn't respond to @selector(startServerConfig:completion:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
         NSArray *args = message;
         FLTConfig *arg_config = args[0];
-        FlutterError *error;
-        [api startServerConfig:arg_config error:&error];
-        callback(wrapResult(nil, error));
+        [api startServerConfig:arg_config completion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+          callback(wrapResult(output, error));
+        }];
       }];
     }
     else {
@@ -381,6 +381,24 @@ void FLTConnectionApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<
         NSArray *args = message;
         NSString *arg_id = args[0];
         [api disconnectId:arg_id completion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+          callback(wrapResult(output, error));
+        }];
+      }];
+    }
+    else {
+      [channel setMessageHandler:nil];
+    }
+  }
+  {
+    FlutterBasicMessageChannel *channel =
+      [FlutterBasicMessageChannel
+        messageChannelWithName:@"dev.flutter.pigeon.ConnectionApi.reset"
+        binaryMessenger:binaryMessenger
+        codec:FLTConnectionApiGetCodec()];
+    if (api) {
+      NSCAssert([api respondsToSelector:@selector(resetWithCompletion:)], @"FLTConnectionApi api (%@) doesn't respond to @selector(resetWithCompletion:)", api);
+      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
+        [api resetWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
           callback(wrapResult(output, error));
         }];
       }];

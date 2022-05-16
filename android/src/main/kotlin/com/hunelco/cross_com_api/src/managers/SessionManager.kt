@@ -28,7 +28,6 @@ class SessionManager private constructor() {
         connectionCallback = Pigeon.ConnectionCallbackApi(binaryMessenger)
         communicationCallback = Pigeon.CommunicationCallbackApi(binaryMessenger)
         discoveryCallbackApi = Pigeon.DiscoveryCallbackApi(binaryMessenger)
-        Timber.i("updateBinaryMessenger $binaryMessenger ${binaryMessenger == null}")
 
         connectionCallback!!.onDeviceConnected(Pigeon.ConnectedDevice.Builder().build()) {
             Timber.i("OKSSSSS")
