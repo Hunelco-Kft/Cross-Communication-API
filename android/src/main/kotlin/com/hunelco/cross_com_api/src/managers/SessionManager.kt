@@ -28,10 +28,6 @@ class SessionManager private constructor() {
         connectionCallback = Pigeon.ConnectionCallbackApi(binaryMessenger)
         communicationCallback = Pigeon.CommunicationCallbackApi(binaryMessenger)
         discoveryCallbackApi = Pigeon.DiscoveryCallbackApi(binaryMessenger)
-
-        connectionCallback!!.onDeviceConnected(Pigeon.ConnectedDevice.Builder().build()) {
-            Timber.i("OKSSSSS")
-        }
     }
 
     fun getConnection(id: String): ConnectedDevice<*>? = connections[id]
@@ -53,7 +49,6 @@ class SessionManager private constructor() {
     }
 
     inline fun <reified T : ConnectedDevice<*>> getCastedConnection(id: String): T? {
-        Timber.i("UNCASTED " + getConnection(id) )
         val entity = getConnection(id)
         if (entity != null && entity is T)
             return entity
@@ -76,7 +71,6 @@ class SessionManager private constructor() {
 
     inline fun <reified T : ConnectedDevice<*>> removeCastedConnection(id: String): T? {
         if (getConnection(id) is T) return removeConnection(id) as T
-
         return null
     }
 

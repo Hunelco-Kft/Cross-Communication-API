@@ -1,6 +1,5 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:cross_com_api/cross_com_api.dart';
 
 void main() {
   const MethodChannel channel = MethodChannel('cross_com_api');

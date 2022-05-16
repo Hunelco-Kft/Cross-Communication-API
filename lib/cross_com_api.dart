@@ -65,7 +65,6 @@ class CrossComServerApi extends BaseApi with ConnectionCallbackApi, Communicatio
 
   @override
   bool onDeviceConnected(ConnectedDevice device) {
-    print("NearbyClientManager - CONNECTED");
     return true;
   }
 
@@ -189,7 +188,6 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
 
   @override
   bool onDeviceConnected(ConnectedDevice device) {
-    // TODO: implement onDeviceConnected
     return true;
   }
 
