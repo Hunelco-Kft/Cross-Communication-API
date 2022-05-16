@@ -2,7 +2,6 @@ package com.hunelco.cross_com_api.src.managers
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo
 import com.google.gson.Gson
 import com.hunelco.cross_com_api.src.models.BleDevice
 import com.hunelco.cross_com_api.src.models.ConnectedDevice
@@ -42,7 +41,7 @@ class SessionManager private constructor() {
                 .setProvider(if (conn is BleDevice) Pigeon.Provider.gatt else Pigeon.Provider.nearby)
                 .build()
 
-            connectionCallback?.onDeviceDisconnected(connectedDevice) {}
+                connectionCallback?.onDeviceDisconnected(connectedDevice) {}
         }
 
         return conn
@@ -65,6 +64,7 @@ class SessionManager private constructor() {
             .build()
 
         connectionCallback?.onDeviceConnected(connectedDevice) { isVerified ->
+            Timber.i("VerifiedDevice: ${isVerified} ${conn}");
             if (isVerified) _verifiedDevice.value = conn
         }
     }
