@@ -1,6 +1,7 @@
 package com.hunelco.cross_com_api.src.managers.nearby
 
 import android.content.Context
+import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.*
 import com.hunelco.cross_com_api.src.managers.SessionManager
@@ -28,7 +29,7 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
             if (!config.allowMultipleVerifiedDevice!! && sessionManager.hasVerifiedDevice())
                 connectionsClient.rejectConnection(endpointId)
             else {
-                Timber.d("Device connected ${connectionInfo.endpointName} via Nearby Server.")
+                Timber.d("Device connecting ${connectionInfo.endpointName} via Nearby Server.")
                 internalDevices.add(NearbyDevice(endpointId, connectionInfo))
                 connectionsClient.acceptConnection(endpointId, payloadCallback)
             }
@@ -36,8 +37,9 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
 
         override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
             if (result.status.isSuccess) {
-                val device = internalDevices.find { it.id == endpointId }
-                if (device != null) sessionManager.addConnection(device, Pigeon.Provider.nearby)
+                val device = internalDevices.find { it.id == endpointId } ?: return
+                sessionManager.addConnection(device, Pigeon.Provider.nearby)
+                Timber.i("Device (${device.id}) connected via Nearby Server.")
             } else {
                 val entity = internalDevices.find { it.id == endpointId }
                 if (entity != null) internalDevices.remove(entity)
@@ -45,10 +47,10 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
         }
 
         override fun onDisconnected(endpointId: String) {
-            val entity = internalDevices.find { it.id == endpointId }
-            if (entity != null) internalDevices.remove(entity)
-
+            val device = internalDevices.find { it.id == endpointId } ?: return
+            internalDevices.remove(device)
             sessionManager.removeCastedConnection<NearbyDevice>(endpointId)
+            Timber.i("Device (${device.id}) disconnected from Nearby Server.")
         }
     }
     private val payloadCallback = object : PayloadCallback() {
@@ -134,7 +136,10 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
     }
 
     suspend fun sendMessage(deviceId: String, data: String) {
-        sessionManager.getCastedConnection<NearbyDevice>(deviceId) ?: return
+        // TODO...
+        Timber.i("DEVICE ID $deviceId" )
+//        Timber.i("TALÁLAT? " + sessionManager.getCastedConnection<NearbyDevice>(deviceId))
+//        sessionManager.getCastedConnection<NearbyDevice>(deviceId) ?: return
 
         return suspendCoroutine { continuation ->
             connectionsClient.sendPayload(deviceId, Payload.fromBytes(data.toByteArray()))

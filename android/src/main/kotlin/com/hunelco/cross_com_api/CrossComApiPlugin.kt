@@ -87,7 +87,12 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon
         val serviceConn = CrossComServiceConn(config, binaryMessenger!!)
         serviceConn.config = config
 
-        if (binding?.activity?.bindService(intent, serviceConn, Context.BIND_AUTO_CREATE) == true)
+        if (binding?.activity?.bindService(
+                intent,
+                serviceConn,
+                Context.BIND_AUTO_CREATE
+            ) == true
+        )
             serviceConnection = serviceConn
     }
 
@@ -100,8 +105,10 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon
         val activity = binding!!.activity
         stopServer()
 
-        crossComClient = CrossComClient(activity, config)
-        crossComClient!!.updateBinaryMessenger(binaryMessenger!!)
+        if (crossComClient == null) {
+            crossComClient = CrossComClient(activity, config)
+            crossComClient!!.updateBinaryMessenger(binaryMessenger!!)
+        }
     }
 
     override fun stopServer() {

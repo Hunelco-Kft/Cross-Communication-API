@@ -29,6 +29,10 @@ class SessionManager private constructor() {
         communicationCallback = Pigeon.CommunicationCallbackApi(binaryMessenger)
         discoveryCallbackApi = Pigeon.DiscoveryCallbackApi(binaryMessenger)
         Timber.i("updateBinaryMessenger $binaryMessenger ${binaryMessenger == null}")
+
+        connectionCallback!!.onDeviceConnected(Pigeon.ConnectedDevice.Builder().build()) {
+            Timber.i("OKSSSSS")
+        }
     }
 
     fun getConnection(id: String): ConnectedDevice<*>? = connections[id]
@@ -50,6 +54,7 @@ class SessionManager private constructor() {
     }
 
     inline fun <reified T : ConnectedDevice<*>> getCastedConnection(id: String): T? {
+        Timber.i("UNCASTED " + getConnection(id) )
         val entity = getConnection(id)
         if (entity != null && entity is T)
             return entity
@@ -98,7 +103,9 @@ class SessionManager private constructor() {
 
     fun onDeviceDiscovered(deviceId: String) {
         Timber.i("Nerby Endpoint discovered -> SessionManager: $deviceId ${discoveryCallbackApi == null}")
-        discoveryCallbackApi?.onDeviceDiscovered(deviceId){}
+        discoveryCallbackApi!!.onDeviceDiscovered(deviceId){
+            Timber.i("Nearby - CSUMPA")
+        }
     }
 
     fun onDeviceLost(deviceId: String) {

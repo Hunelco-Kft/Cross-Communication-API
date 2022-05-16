@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
 class CrossComClient(context: Context, config: Pigeon.Config) :
@@ -36,6 +37,7 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
         coroutineScope.launch {
             try {
                 client.startDiscovery()
+                isDiscovering.set(true)
                 result.success(0)
             } catch (ex: Exception) {
                 result.error(ex)
@@ -49,6 +51,7 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
         coroutineScope.launch {
             try {
                 client.stopDiscovery()
+                isDiscovering.set(false)
                 result.success(0)
             } catch (ex: Exception) {
                 result.error(ex)
@@ -78,6 +81,7 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
         data: String,
         result: Pigeon.Result<Long>
     ) {
+        Timber.d("VERIFIED DEVICE ${sessionManager.verifiedDevice.value}")
         val verifiedDeviceId = sessionManager.verifiedDevice.value?.id
             ?: return result.success(0)
         return sendMessage(verifiedDeviceId, endpoint, data, result)

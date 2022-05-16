@@ -6,19 +6,24 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 abstract class BaseApi {
-  static const MethodChannel _channel = MethodChannel('cross_com_api');
+  static const MethodChannel _channel = MethodChannel('cross_com_api', JSONMethodCodec());
 }
 
 // It only works on Android Server Side!
 class CrossComServerApi extends BaseApi with ConnectionCallbackApi, CommunicationCallbackApi {
-  final ServerApi _api = ServerApi(binaryMessenger: BaseApi._channel.binaryMessenger);
+  static final CrossComServerApi _instance = CrossComServerApi._internal();
+
+  factory CrossComServerApi() {
+    ConnectionCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
+    CommunicationCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
+    return _instance;
+  }
+
+  CrossComServerApi._internal();
+
+  final ServerApi _api = ServerApi(binaryMessenger: const MethodChannel('server_api').binaryMessenger);
   final AdvertiseApi _advertiseApi = AdvertiseApi(binaryMessenger: BaseApi._channel.binaryMessenger);
   final CommunicationApi _commApi = CommunicationApi(binaryMessenger: BaseApi._channel.binaryMessenger);
-
-  constructor() {
-    ConnectionCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
-    CommunicationCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
-  }
 
   Future<void> startServer(
       {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) {
@@ -48,16 +53,19 @@ class CrossComServerApi extends BaseApi with ConnectionCallbackApi, Communicatio
 
   @override
   void onMessageReceived(DataMessage msg) {
+    print("RECEIVED" + msg.toString());
     // TODO: implement onMessageReceived
   }
 
   @override
   void onRawMessageReceived(String deviceId, String msg) {
+    print("RECEIVED RAW" + msg.toString());
     // TODO: implement onRawMessageReceived
   }
 
   @override
   bool onDeviceConnected(ConnectedDevice device) {
+    print("NearbyClientManager - CONNECTED");
     return true;
   }
 
@@ -68,6 +76,19 @@ class CrossComServerApi extends BaseApi with ConnectionCallbackApi, Communicatio
 }
 
 class CrossComClientApi extends BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, StateCallbackApi, DiscoveryCallbackApi {
+  static final CrossComClientApi _instance = CrossComClientApi._internal();
+
+  factory CrossComClientApi() {
+    ConnectionCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
+    CommunicationCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
+    StateCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
+    DiscoveryCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
+
+    return _instance;
+  }
+
+  CrossComClientApi._internal();
+
   final characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
   final serviceUuid = Guid("00001111-0000-1000-8000-00805F9B34FB");
 
@@ -90,13 +111,6 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
 
   StreamController<DataMessage>? _onMessageStreamController;
   Stream<DataMessage>? _onMessageStream;
-
-  constructor() {
-    ConnectionCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
-    CommunicationCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
-    StateCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
-    DiscoveryCallbackApi.setup(this, binaryMessenger: BaseApi._channel.binaryMessenger);
-  }
 
   Future<void> startServer(
       {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) {
@@ -154,8 +168,10 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
   }
 
   Future<void> sendMessage(String endpoint, String data) async {
-    //final message = MessagePayload(endpoint: endpoint, data: data);
-    //await _generalCharacteristic?.write(jsonEncode(message));
+    final result = await _communicationApi.sendMessageToVerifiedDevice(endpoint, data);
+    print("SIKERES ÍRÁS? " + result.toString());
+    // final message = MessagePayload(endpoint: endpoint, data: data);
+    // await _generalCharacteristic?.write(jsonEncode(message));
   }
 
   Stream<String>? getOnDeviceStream() {
@@ -174,7 +190,7 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
   @override
   bool onDeviceConnected(ConnectedDevice device) {
     // TODO: implement onDeviceConnected
-    throw UnimplementedError();
+    return true;
   }
 
   @override
