@@ -106,6 +106,9 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
 
   BluetoothCharacteristic? _generalCharacteristic;
 
+  StreamController<bool>? _onDeviceConnectedStreamController;
+  Stream<bool>? _onDeviceConnectedStream;
+
   StreamController<String>? _onDeviceStreamController;
   Stream<String>? _onDeviceStream;
 
@@ -151,6 +154,9 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
   Future<void> connectToDevice(String connectToDeviceid) async {
     print('connectToDevice $connectToDeviceid');
     if (Platform.isAndroid) {
+      _onDeviceConnectedStreamController = StreamController<bool>();
+      _onDeviceConnectedStream = _onDeviceConnectedStreamController?.stream;
+
       await _connectionApi.connect(connectToDeviceid, "DEVICE");
       _onMessageStreamController = StreamController<DataMessage>();
       _onMessageStream = _onMessageStreamController?.stream;
@@ -168,7 +174,8 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
   }
 
   Future<void> sendMessage(String endpoint, String data) async {
-    final result = await _communicationApi.sendMessageToVerifiedDevice(endpoint, data);
+    await Future.delayed(Duration(seconds: 1));
+    final result = await _communicationApi.sendMessage('9CCI', endpoint, data);
     print("SIKERES ÍRÁS? " + result.toString());
     // final message = MessagePayload(endpoint: endpoint, data: data);
     // await _generalCharacteristic?.write(jsonEncode(message));
@@ -182,6 +189,10 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
     return _onMessageStream;
   }
 
+  Stream<bool>? getOnDeviceConnectedStream() {
+    return _onDeviceConnectedStream;
+  }
+
   @override
   void onBluetoothStateChanged(StateResponse state) {
     // TODO: implement onBluetoothStateChanged
@@ -189,7 +200,7 @@ class CrossComClientApi extends BaseApi with ConnectionCallbackApi, Communicatio
 
   @override
   bool onDeviceConnected(ConnectedDevice device) {
-    // TODO: implement onDeviceConnected
+    _onDeviceConnectedStreamController?.add(true);
     return true;
   }
 

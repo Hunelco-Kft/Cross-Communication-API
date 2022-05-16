@@ -21,10 +21,7 @@ import com.hunelco.cross_com_api.src.utils.MessageUtils
 import com.hunelco.cross_com_api.src.utils.NotificationUtils
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugins.Pigeon
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -202,11 +199,15 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
             gattManager!!.config = config
             nearbyManager!!.config = config
 
-            sessionManager.updateBinaryMessenger(binaryMessenger)
-            stateCallbackApi = Pigeon.StateCallbackApi(binaryMessenger)
+            coroutineScope.launch {
+                withContext(Dispatchers.Main) {
+                    sessionManager.updateBinaryMessenger(binaryMessenger)
+                    stateCallbackApi = Pigeon.StateCallbackApi(binaryMessenger)
 
-            Pigeon.CommunicationApi.setup(binaryMessenger, this@CrossComService)
-            Pigeon.AdvertiseApi.setup(binaryMessenger, this@CrossComService)
+                    Pigeon.CommunicationApi.setup(binaryMessenger, this@CrossComService)
+                    Pigeon.AdvertiseApi.setup(binaryMessenger, this@CrossComService)
+                }
+            }
         }
     }
 }
