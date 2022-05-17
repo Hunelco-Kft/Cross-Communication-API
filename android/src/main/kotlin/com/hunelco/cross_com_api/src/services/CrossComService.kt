@@ -17,6 +17,8 @@ import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.ble.GattServerManager
 import com.hunelco.cross_com_api.src.managers.nearby.NearbyServerManager
 import com.hunelco.cross_com_api.src.models.DataPayload
+import com.hunelco.cross_com_api.src.models.VerificationResponse
+import com.hunelco.cross_com_api.src.utils.AlreadyAdvertisingException
 import com.hunelco.cross_com_api.src.utils.MessageUtils
 import com.hunelco.cross_com_api.src.utils.NotificationUtils
 import io.flutter.plugin.common.BinaryMessenger
@@ -45,7 +47,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
                 when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)) {
                     BluetoothAdapter.STATE_ON -> {
                         response.setState(Pigeon.State.on)
-                        startAdvertise(null)
+                        startAdvertise(null, null)
                     }
                     BluetoothAdapter.STATE_OFF -> {
                         stopAdvertise(null)
@@ -72,7 +74,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
             hasP2PCapability = connected
             val response = Pigeon.StateResponse.Builder()
             if (connected) {
-                startAdvertise(null)
+                startAdvertise(null, null)
                 response.setState(Pigeon.State.on)
             } else {
                 stopAdvertise(null)
@@ -87,6 +89,17 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
     private val coroutineJob = Job()
     private val coroutineScope = CoroutineScope(Dispatchers.IO + coroutineJob)
 
+    init {
+        sessionManager.verifiedDevice.observeForever { verifiedDevice ->
+            if (verifiedDevice != null) {
+                val res = VerificationResponse(verifiedDevice.args ?: emptyMap())
+                val serializedResponse = gson.toJson(res, VerificationResponse::class.java)
+                sendMessageToVerifiedDevice(
+                    SessionManager.ENDPOINT_VERIFICATION, serializedResponse, null
+                )
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -121,22 +134,25 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         super.onDestroy()
     }
 
-    override fun startAdvertise(result: Pigeon.Result<Long>?) {
+    override fun startAdvertise(verificationCode: String?, result: Pigeon.Result<Long>?) {
         if (isAdvertising.get()) {
-            result?.success(0)
+            result?.error(AlreadyAdvertisingException())
             return
         }
 
         gattManager?.open()
         coroutineScope.launch {
             try {
+                if (verificationCode != null)
+                    sessionManager.verificationCode.value = verificationCode
+
                 gattManager?.startAdvertise()
                 nearbyManager?.startAdvertise()
 
                 isAdvertising.set(true)
                 result?.success(0)
             } catch (ex: Exception) {
-                Timber.e("STAET ERR ")
+                Timber.e(ex, "Couldn't start Advertising")
                 result?.error(ex)
             }
         }
@@ -165,18 +181,19 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
 
     override fun sendMessage(
         id: String, endpoint: String, payload: String,
-        result: Pigeon.Result<Long>
+        result: Pigeon.Result<Long>?
     ) {
         val dataPayload = DataPayload(endpoint, payload)
-        val serializedPayload = MessageUtils.addEOF(gson.toJson(dataPayload, DataPayload::class.java))
+        val serializedPayload =
+            MessageUtils.addEOF(gson.toJson(dataPayload, DataPayload::class.java))
 
         coroutineScope.launch {
             try {
                 gattManager?.sendMessage(id, serializedPayload)
                 nearbyManager?.sendMessage(id, serializedPayload)
-                result.success(0)
+                result?.success(0)
             } catch (ex: Exception) {
-                result.error(ex)
+                result?.error(ex)
             }
         }
     }
@@ -184,10 +201,10 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
     override fun sendMessageToVerifiedDevice(
         endpoint: String,
         data: String,
-        result: Pigeon.Result<Long>
+        result: Pigeon.Result<Long>?
     ) {
         val verifiedDeviceId = sessionManager.verifiedDevice.value?.id
-            ?: return result.success(0)
+            ?: return result?.success(0) ?: Unit
         return sendMessage(verifiedDeviceId, endpoint, data, result)
     }
 

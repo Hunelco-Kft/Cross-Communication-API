@@ -5,42 +5,102 @@ import 'package:cross_com_api/api.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-abstract class BaseApi {
-  static const MethodChannel _channel = MethodChannel('cross_com_api', JSONMethodCodec());
+class DeviceInfo {
+  String id;
+
+  String name;
+
+  DeviceInfo({required this.id, required this.name});
 }
 
-// It only works on Android Server Side!
-class CrossComServerApi extends BaseApi with ConnectionCallbackApi, CommunicationCallbackApi {
-  static final CrossComServerApi _instance = CrossComServerApi._internal();
+class RawMessage {
+  String deviceId;
 
-  factory CrossComServerApi() {
-    ConnectionCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
-    CommunicationCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
-    return _instance;
+  String data;
+
+  RawMessage({required this.deviceId, required this.data});
+}
+
+enum DeviceState { connected, disconnected }
+
+class DeviceStateEvent {
+  ConnectedDevice device;
+
+  DeviceState state;
+
+  DeviceStateEvent({required this.device, required this.state});
+}
+
+enum Signaller { wifi, bluetooth }
+
+class SignallerStateEvent {
+  Signaller signaller;
+
+  StateResponse state;
+
+  SignallerStateEvent({required this.signaller, required this.state});
+}
+
+enum BroadcastType { none, server, client }
+
+abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, StateCallbackApi, DeviceVerificationCallbackApi {
+  static const MethodChannel _channel = MethodChannel('cross_com_api', JSONMethodCodec());
+
+  static BroadcastType _broadcastType = BroadcastType.none;
+
+  final FlutterBluePlus _flutterBlue = FlutterBluePlus.instance;
+  final _characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
+  final _serviceUuid = Guid("00001111-0000-1000-8000-00805F9B34FB");
+
+  final _onDeviceStateStreamController = StreamController<DeviceStateEvent>();
+  Stream<DeviceStateEvent> get onDeviceStateStream {
+    return _onDeviceStateStreamController.stream;
   }
 
-  CrossComServerApi._internal();
+  Map<String, String> verifiedDeviceMeta = {};
 
-  final ServerApi _api = ServerApi(binaryMessenger: const MethodChannel('server_api').binaryMessenger);
-  final AdvertiseApi _advertiseApi = AdvertiseApi(binaryMessenger: BaseApi._channel.binaryMessenger);
-  final CommunicationApi _commApi = CommunicationApi(binaryMessenger: BaseApi._channel.binaryMessenger);
-
-  Future<void> startServer(
-      {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) {
-    final config = Config(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
-    return _api.startServer(config);
+  final Map<String, ConnectedDevice> _connectedDevices = {};
+  Map<String, ConnectedDevice> get connectedDevices {
+    return {..._connectedDevices};
   }
 
-  Future<void> stopServer() {
-    return _api.stopServer();
+  final _onMessageStreamController = StreamController<DataMessage>();
+  Stream<DataMessage> get onMessage {
+    return _onMessageStreamController.stream;
   }
 
-  Future<void> startAdvertise() {
-    return _advertiseApi.startAdvertise();
+  final _onRawMessageStreamController = StreamController<RawMessage>();
+  Stream<RawMessage> get onRawMessage {
+    return _onRawMessageStreamController.stream;
   }
 
-  Future<void> stopAdvertise() {
-    return _advertiseApi.stopAdvertise();
+  final _onSignallerStateStreamController = StreamController<SignallerStateEvent>();
+  Stream<SignallerStateEvent> get onSignallerState {
+    return _onSignallerStateStreamController.stream;
+  }
+
+  final ConnectionApi _connectionApi = ConnectionApi(binaryMessenger: _channel.binaryMessenger);
+  final CommunicationApi _commApi = CommunicationApi(binaryMessenger: _channel.binaryMessenger);
+  final DeviceVerificationApi _deviceVerificationApi = DeviceVerificationApi(binaryMessenger: _channel.binaryMessenger);
+
+  BaseApi() {
+    ConnectionCallbackApi.setup(this, binaryMessenger: _channel.binaryMessenger);
+    CommunicationCallbackApi.setup(this, binaryMessenger: _channel.binaryMessenger);
+    StateCallbackApi.setup(this, binaryMessenger: _channel.binaryMessenger);
+    DeviceVerificationCallbackApi.setup(this, binaryMessenger: _channel.binaryMessenger);
+  }
+
+  ConnectedDevice? getConnectedDevice(String deviceId) {
+    return _connectedDevices[deviceId];
+  }
+
+  Future<void> connect(String toDeviceId, String displayName) {
+    return _connectionApi.connect(toDeviceId, displayName);
+  }
+
+  Future<void> disconnect(String toDeviceId) {
+    if (!_connectedDevices.containsKey(toDeviceId)) return Future.value();
+    return _connectionApi.disconnect(toDeviceId);
   }
 
   Future<void> sendMessage(String toDeviceId, String endpoint, String payload) {
@@ -51,186 +111,192 @@ class CrossComServerApi extends BaseApi with ConnectionCallbackApi, Communicatio
     return _commApi.sendMessageToVerifiedDevice(endpoint, data);
   }
 
-  @override
-  void onMessageReceived(DataMessage msg) {
-    print("RECEIVED" + msg.toString());
-    // TODO: implement onMessageReceived
+  Future<Map<String, String>> requestDeviceVerification(String toDevice, String code, Map<String, String> args) async {
+    final request = DeviceVerificationRequest(verificationCode: code, args: args);
+    return _deviceVerificationApi.requestDeviceVerification(toDevice, request) as Map<String, String>;
   }
 
   @override
-  void onRawMessageReceived(String deviceId, String msg) {
-    print("RECEIVED RAW" + msg.toString());
-    // TODO: implement onRawMessageReceived
-  }
-
-  @override
-  bool onDeviceConnected(ConnectedDevice device) {
-    return true;
+  void onDeviceConnected(ConnectedDevice device) {
+    _connectedDevices[device.deviceId!] = device;
+    _onDeviceStateStreamController.add(DeviceStateEvent(device: device, state: DeviceState.connected));
   }
 
   @override
   void onDeviceDisconnected(ConnectedDevice device) {
-    // TODO: implement onDeviceDisconnected
+    _connectedDevices.remove(device.deviceId!);
+    _onDeviceStateStreamController.add(DeviceStateEvent(device: device, state: DeviceState.disconnected));
+  }
+
+  @override
+  void onMessageReceived(DataMessage msg) {
+    _onMessageStreamController.add(msg);
+  }
+
+  @override
+  void onRawMessageReceived(String deviceId, String msg) {
+    _onRawMessageStreamController.add(RawMessage(deviceId: deviceId, data: msg));
+  }
+
+  @override
+  void onBluetoothStateChanged(StateResponse state) {
+    _onSignallerStateStreamController.add(SignallerStateEvent(signaller: Signaller.bluetooth, state: state));
+  }
+
+  @override
+  void onWifiStateChanged(StateResponse state) {
+    _onSignallerStateStreamController.add(SignallerStateEvent(signaller: Signaller.wifi, state: state));
+  }
+
+  @override
+  Map<String, String> onDeviceVerified(ConnectedDevice device, DeviceVerificationRequest request) {
+    return verifiedDeviceMeta;
   }
 }
 
-class CrossComClientApi extends BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, StateCallbackApi, DiscoveryCallbackApi {
+// It only works on Android Server Side!
+class CrossComServerApi extends BaseApi {
+  static final CrossComServerApi _instance = CrossComServerApi._internal();
+
+  factory CrossComServerApi() {
+    return _instance;
+  }
+
+  CrossComServerApi._internal();
+
+  final ServerApi _api = ServerApi(binaryMessenger: BaseApi._channel.binaryMessenger);
+  final AdvertiseApi _advertiseApi = AdvertiseApi(binaryMessenger: BaseApi._channel.binaryMessenger);
+
+  Future<void> startServer(
+      {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) async {
+    if (BaseApi._broadcastType != BroadcastType.none) {
+      throw Exception("The server is in a bad state ${BaseApi._broadcastType}");
+    }
+
+    final config = Config(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
+
+    await _api.startServer(config);
+    BaseApi._broadcastType = BroadcastType.server;
+  }
+
+  Future<void> stopServer() async {
+    if (BaseApi._broadcastType != BroadcastType.server) {
+      throw Exception("The server is in a bad state ${BaseApi._broadcastType}");
+    }
+
+    _connectedDevices.clear();
+    await _api.stopServer();
+    BaseApi._broadcastType = BroadcastType.none;
+  }
+
+  Future<void> reset() {
+    return _api.reset();
+  }
+
+  Future<void> startAdvertise(String verificationCode) {
+    return _advertiseApi.startAdvertise(verificationCode);
+  }
+
+  Future<void> stopAdvertise() {
+    return _advertiseApi.stopAdvertise();
+  }
+}
+
+class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   static final CrossComClientApi _instance = CrossComClientApi._internal();
 
   factory CrossComClientApi() {
-    ConnectionCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
-    CommunicationCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
-    StateCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
     DiscoveryCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
-
     return _instance;
   }
 
   CrossComClientApi._internal();
 
-  final characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
-  final serviceUuid = Guid("00001111-0000-1000-8000-00805F9B34FB");
-
-  final FlutterBluePlus _flutterBlue = FlutterBluePlus.instance;
+  final _onDeviceDiscoveredStreamController = StreamController<DeviceInfo>();
+  Stream<DeviceInfo> get _onDeviceDiscovered {
+    return _onDeviceDiscoveredStreamController.stream;
+  }
 
   final ClientApi _api = ClientApi(binaryMessenger: BaseApi._channel.binaryMessenger);
-  final ConnectionApi _connectionApi = ConnectionApi(binaryMessenger: BaseApi._channel.binaryMessenger);
   final DiscoveryApi _discoveryApi = DiscoveryApi(binaryMessenger: BaseApi._channel.binaryMessenger);
-  final CommunicationApi _communicationApi = CommunicationApi(binaryMessenger: BaseApi._channel.binaryMessenger);
 
-  StreamSubscription<List<ScanResult>>? _subscription;
-  Map<String, ConnectedDevice> _devices = {};
+  late StreamSubscription<List<ScanResult>> _scanStream;
+  Map<String, BluetoothDevice> _scannedDevices = {};
 
-  List<BluetoothService>? _services;
+  Future<void> startClient(
+      {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) async {
+    if (BaseApi._broadcastType != BroadcastType.none) {
+      throw Exception("The client is in a bad state ${BaseApi._broadcastType}");
+    }
 
-  BluetoothCharacteristic? _generalCharacteristic;
-
-  StreamController<bool>? _onDeviceConnectedStreamController;
-  Stream<bool>? _onDeviceConnectedStream;
-
-  StreamController<String>? _onDeviceStreamController;
-  Stream<String>? _onDeviceStream;
-
-  StreamController<DataMessage>? _onMessageStreamController;
-  Stream<DataMessage>? _onMessageStream;
-
-  Future<void> startServer(
-      {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) {
     final config = Config(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
-    return _api.startClient(config);
+
+    _scanStream = _flutterBlue.scanResults.listen((scanResult) {
+      for (ScanResult r in scanResult) {
+        _scannedDevices[r.device.id.id] = r.device;
+        _onDeviceDiscoveredStreamController.add(DeviceInfo(id: r.device.id.id, name: r.device.name));
+      }
+    });
+
+    await _api.startClient(config);
+    BaseApi._broadcastType = BroadcastType.client;
+  }
+
+  void stopClient() {
+    if (BaseApi._broadcastType != BroadcastType.client) {
+      throw Exception("The client is in a bad state ${BaseApi._broadcastType}");
+    }
+
+    _scanStream.cancel();
+    _connectedDevices.clear();
+    BaseApi._broadcastType = BroadcastType.none;
+  }
+
+  @override
+  Future<void> connect(String toDeviceId, String displayName) {
+    if (Platform.isAndroid) {
+      return super.connect(toDeviceId, displayName);
+    } else {
+      return _scannedDevices[toDeviceId]!.connect(timeout: const Duration(seconds: 10));
+    }
+  }
+
+  @override
+  Future<void> disconnect(String toDeviceId) async {
+    if (Platform.isAndroid) {
+      return super.disconnect(toDeviceId);
+    } else {
+      final connectedDevice = (await _flutterBlue.connectedDevices).firstWhere((element) => element.id.id == toDeviceId);
+      return connectedDevice.disconnect();
+    }
   }
 
   Future<void> startDiscovery({int timeoutInSeconds = 10000000}) async {
-    _devices.clear();
-
-    _onDeviceStreamController = StreamController<String>();
-    _onDeviceStream = _onDeviceStreamController?.stream;
     if (Platform.isAndroid) {
       await _discoveryApi.startDiscovery();
     } else {
+      _scannedDevices.clear();
       await _flutterBlue.startScan(
-          scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [serviceUuid], timeout: Duration(seconds: timeoutInSeconds));
-      _subscription = _flutterBlue.scanResults.listen((results) {
-        for (ScanResult r in results) {
-          _devices[r.device.id.id] = ConnectedDevice(deviceId: r.device.id.id, provider: Provider.gatt);
-          // TODO: Stream adatfolyam behívása
-        }
-      });
+          scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [_serviceUuid], timeout: Duration(seconds: timeoutInSeconds));
     }
   }
 
   Future<void> stopDiscovery() async {
-    _onDeviceStreamController?.close(); // TODO
-
     if (Platform.isAndroid) {
-      _subscription?.cancel();
       await _discoveryApi.stopDiscovery();
     } else {
       await _flutterBlue.stopScan();
+      _scannedDevices.clear();
     }
   }
 
-  Future<void> connectToDevice(String connectToDeviceid) async {
-    print('connectToDevice $connectToDeviceid');
-    if (Platform.isAndroid) {
-      _onDeviceConnectedStreamController = StreamController<bool>();
-      _onDeviceConnectedStream = _onDeviceConnectedStreamController?.stream;
-
-      await _connectionApi.connect(connectToDeviceid, "DEVICE");
-      _onMessageStreamController = StreamController<DataMessage>();
-      _onMessageStream = _onMessageStreamController?.stream;
-    } else {
-      await _flutterBlue.stopScan();
-    }
-  }
-
-  Future<void> disconnectFromDevice(String id) async {
-    if (Platform.isAndroid) {
-      await _connectionApi.disconnect(id);
-    } else {
-      await _flutterBlue.stopScan();
-    }
-  }
-
-  Future<void> sendMessage(String endpoint, String data) async {
-    await Future.delayed(Duration(seconds: 1));
-    final result = await _communicationApi.sendMessage('9CCI', endpoint, data);
-    print("SIKERES ÍRÁS? " + result.toString());
-    // final message = MessagePayload(endpoint: endpoint, data: data);
-    // await _generalCharacteristic?.write(jsonEncode(message));
-  }
-
-  Stream<String>? getOnDeviceStream() {
-    return _onDeviceStream;
-  }
-
-  Stream<DataMessage>? getOnMessageStream() {
-    return _onMessageStream;
-  }
-
-  Stream<bool>? getOnDeviceConnectedStream() {
-    return _onDeviceConnectedStream;
-  }
-
   @override
-  void onBluetoothStateChanged(StateResponse state) {
-    // TODO: implement onBluetoothStateChanged
-  }
-
-  @override
-  bool onDeviceConnected(ConnectedDevice device) {
-    _onDeviceConnectedStreamController?.add(true);
-    return true;
-  }
-
-  @override
-  void onDeviceDisconnected(ConnectedDevice device) {
-    // TODO: implement onDeviceDisconnected
-  }
-
-  @override
-  void onMessageReceived(DataMessage msg) {
-    _onMessageStreamController?.add(msg);
-  }
-
-  @override
-  void onRawMessageReceived(String deviceId, String msg) {
-    // TODO: implement onRawMessageReceived
-  }
-
-  @override
-  void onWifiStateChanged(StateResponse state) {
-    // TODO: implement onWifiStateChanged
-  }
-
-  @override
-  void onDeviceDiscovered(String deviceId) {
-    print("Nerby Endpoint discovered -> CrossApi: $deviceId");
-    _onDeviceStreamController?.add(deviceId);
+  void onDeviceDiscovered(String deviceId, String deviceName) {
+    _onDeviceDiscoveredStreamController.add(DeviceInfo(id: deviceId, name: deviceName));
   }
 
   @override
   void onDeviceLost(String deviceId) {
-    // TODO: implement onDeviceLost
+    // Nothing todo here...
   }
 }

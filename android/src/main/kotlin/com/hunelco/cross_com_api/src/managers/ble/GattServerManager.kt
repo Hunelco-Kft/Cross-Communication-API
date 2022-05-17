@@ -4,10 +4,14 @@ import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 import android.content.Context
+import com.google.gson.Gson
 import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.ble.profiles.GeneralProfile
 import com.hunelco.cross_com_api.src.models.BleDevice
+import com.hunelco.cross_com_api.src.models.NearbyDevice
+import com.hunelco.cross_com_api.src.models.VerificationResponse
 import io.flutter.plugins.Pigeon
+import kotlinx.coroutines.coroutineScope
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.BleServerManager
 import no.nordicsemi.android.ble.ConnectionPriorityRequest
@@ -50,6 +54,25 @@ class GattServerManager private constructor(private val context: Context) :
     private val bleAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser
 
     private val bleAdvertiseCallback = BleAdvertiser.Callback(context)
+
+    init {
+        sessionManager.verifiedDevice.observeForever { verifiedDevice ->
+            if (verifiedDevice != null && config!!.allowMultipleVerifiedDevice == false) {
+                val connections = sessionManager.getConnections<BleDevice>()
+                for (connection in connections) {
+                    if (connection.id != verifiedDevice.id) {
+                        try {
+                            Timber.i("Disconnecting connection (${connection.id}) because it is not verified...")
+                            connection.device.disconnect()
+                            sessionManager.removeConnection(connection.id)
+                        } catch (ex: Exception) {
+                            Timber.e(ex, "Couldn't disconnect from device: ${connection.id}")
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     override fun initializeServer(): MutableList<BluetoothGattService> {
         bluetoothAdapter.name = config!!.name
@@ -136,7 +159,6 @@ class GattServerManager private constructor(private val context: Context) :
                 }
             }
         }
-
 
 
         protected inner class GattCallback() : BleManager.BleManagerGattCallback() {

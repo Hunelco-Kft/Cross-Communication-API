@@ -6,20 +6,33 @@ import com.google.gson.Gson
 import com.hunelco.cross_com_api.src.models.BleDevice
 import com.hunelco.cross_com_api.src.models.ConnectedDevice
 import com.hunelco.cross_com_api.src.models.DataPayload
+import com.hunelco.cross_com_api.src.models.VerificationRequest
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugins.Pigeon
 import timber.log.Timber
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 class SessionManager private constructor() {
-    private val connections = mutableMapOf<String, ConnectedDevice<*>>()
+    private val _connections = mutableMapOf<String, ConnectedDevice<*>>()
+    val connections: Map<String, ConnectedDevice<*>>
+        get() = _connections
 
     private var connectionCallback: Pigeon.ConnectionCallbackApi? = null
     private var communicationCallback: Pigeon.CommunicationCallbackApi? = null
     private var discoveryCallbackApi: Pigeon.DiscoveryCallbackApi? = null
+    private var verificationCallbackApi: Pigeon.DeviceVerificationCallbackApi? = null
+
+    val verificationCode = MutableLiveData<String>()
 
     private val _verifiedDevice = MutableLiveData<ConnectedDevice<*>?>()
     val verifiedDevice: LiveData<ConnectedDevice<*>?>
         get() = _verifiedDevice
+
+    private val _msgLiveData = MutableLiveData<Pigeon.DataMessage>()
+    val msgLiveData: LiveData<Pigeon.DataMessage>
+        get() = _msgLiveData
+
 
     private val gson = Gson()
 
@@ -27,21 +40,35 @@ class SessionManager private constructor() {
         connectionCallback = Pigeon.ConnectionCallbackApi(binaryMessenger)
         communicationCallback = Pigeon.CommunicationCallbackApi(binaryMessenger)
         discoveryCallbackApi = Pigeon.DiscoveryCallbackApi(binaryMessenger)
+        verificationCallbackApi = Pigeon.DeviceVerificationCallbackApi(binaryMessenger)
     }
 
-    fun getConnection(id: String): ConnectedDevice<*>? = connections[id]
+    fun getConnection(id: String): ConnectedDevice<*>? = _connections[id]
+
+    inline fun <reified T : ConnectedDevice<*>> getConnections(): List<T> {
+        val castedConnections = mutableListOf<T>()
+        for (conn in connections) {
+            if (conn.value is T)
+                castedConnections.add(conn.value as T)
+        }
+
+        return castedConnections
+    }
 
     fun removeConnection(id: String): ConnectedDevice<*>? {
         if (_verifiedDevice.value?.id == id) _verifiedDevice.value = null
 
-        val conn = connections.remove(id)
+        val conn = _connections.remove(id)
         if (conn != null) {
+            if (id == _verifiedDevice.value?.id)
+                _verifiedDevice.value = null
+
             val connectedDevice = Pigeon.ConnectedDevice.Builder()
                 .setDeviceId(conn.id)
                 .setProvider(if (conn is BleDevice) Pigeon.Provider.gatt else Pigeon.Provider.nearby)
                 .build()
 
-                connectionCallback?.onDeviceDisconnected(connectedDevice) {}
+            connectionCallback?.onDeviceDisconnected(connectedDevice) {}
         }
 
         return conn
@@ -56,17 +83,14 @@ class SessionManager private constructor() {
     }
 
     fun <T : ConnectedDevice<*>> addConnection(conn: T, provider: Pigeon.Provider) {
-        connections[conn.id] = conn
+        _connections[conn.id] = conn
 
         val connectedDevice = Pigeon.ConnectedDevice.Builder()
             .setDeviceId(conn.id)
             .setProvider(provider)
             .build()
 
-        connectionCallback?.onDeviceConnected(connectedDevice) { isVerified ->
-            Timber.i("VerifiedDevice: ${isVerified} ${conn}");
-            if (isVerified) _verifiedDevice.value = conn
-        }
+        connectionCallback?.onDeviceConnected(connectedDevice) { }
     }
 
     inline fun <reified T : ConnectedDevice<*>> removeCastedConnection(id: String): T? {
@@ -87,6 +111,13 @@ class SessionManager private constructor() {
                 setEndpoint(dataPayload.endpoint)
             }.build()
 
+            if (dataPayload.endpoint == ENDPOINT_VERIFICATION) {
+                val response = verifyDevice(deviceId, provider, data)
+                _msgLiveData.value = dataMsg
+                return
+            }
+
+            _msgLiveData.value = dataMsg
             communicationCallback?.onMessageReceived(dataMsg) {}
         } catch (ex: Exception) {
             Timber.w(ex, "Couldn't serialize message. Msg: $data")
@@ -94,18 +125,41 @@ class SessionManager private constructor() {
         }
     }
 
-    fun onDeviceDiscovered(deviceId: String) {
+    fun onDeviceDiscovered(deviceId: String, deviceName: String) {
         Timber.i("Nerby Endpoint discovered -> SessionManager: $deviceId ${discoveryCallbackApi == null}")
-        discoveryCallbackApi!!.onDeviceDiscovered(deviceId){
+        discoveryCallbackApi!!.onDeviceDiscovered(deviceId, deviceName) {
             Timber.i("Nearby - CSUMPA")
         }
     }
 
     fun onDeviceLost(deviceId: String) {
-        discoveryCallbackApi?.onDeviceLost(deviceId){}
+        discoveryCallbackApi?.onDeviceLost(deviceId) {}
+    }
+
+    private fun verifyDevice(deviceId: String, provider: Pigeon.Provider, data: String) {
+        val request = gson.fromJson(data, VerificationRequest::class.java)
+        if (request.code == verificationCode.value) {
+            val verifiedConnection = Pigeon.ConnectedDevice.Builder()
+                .setDeviceId(deviceId)
+                .setProvider(provider)
+                .build()
+
+            val devRequest = Pigeon.DeviceVerificationRequest.Builder()
+                .setVerificationCode(request.code)
+                .setArgs(request.args)
+                .build()
+
+            verificationCallbackApi?.onDeviceVerified(verifiedConnection, devRequest) {
+                _verifiedDevice.value = getConnection(deviceId)!!.apply {
+                    args = it
+                }
+            }
+        }
     }
 
     companion object {
+        const val ENDPOINT_VERIFICATION = "/verifyDevice"
+
         private lateinit var instance: SessionManager
 
         fun getInstance(): SessionManager {

@@ -34,6 +34,12 @@ class StateResponse {
   State? state;
 }
 
+class DeviceVerificationRequest {
+  String? verificationCode;
+
+  Map<String?, String?>? args;
+}
+
 @HostApi()
 abstract class ServerApi {
   // It starts the server if it is not started yet as a foreground service
@@ -41,30 +47,44 @@ abstract class ServerApi {
   int startServer(Config config);
 
   void stopServer();
-}
-
-@HostApi()
-abstract class ClientApi {
-  void startClient(Config config);
-}
-
-@HostApi()
-abstract class ConnectionApi {
-  @async
-  ConnectedDevice connect(String endpointId, String displayName);
-
-  @async
-  int disconnect(String id);
 
   @async
   int reset();
 }
 
+@HostApi()
+abstract class ClientApi {
+  void startClient(Config config);
+
+  @async
+  int reset();
+}
+
+@HostApi()
+abstract class ConnectionApi {
+  @async
+  ConnectedDevice connect(String toDeviceId, String displayName);
+
+  @async
+  int disconnect(String id);
+}
+
 @FlutterApi()
 abstract class ConnectionCallbackApi {
-  bool onDeviceConnected(ConnectedDevice device);
+  void onDeviceConnected(ConnectedDevice device);
 
   void onDeviceDisconnected(ConnectedDevice device);
+}
+
+@HostApi()
+abstract class DeviceVerificationApi {
+  @async
+  Map<String, String> requestDeviceVerification(String toDeviceId, DeviceVerificationRequest request);
+}
+
+@FlutterApi()
+abstract class DeviceVerificationCallbackApi {
+  Map<String, String> onDeviceVerified(ConnectedDevice device, DeviceVerificationRequest request);
 }
 
 @HostApi()
@@ -78,7 +98,7 @@ abstract class DiscoveryApi {
 
 @FlutterApi()
 abstract class DiscoveryCallbackApi {
-  void onDeviceDiscovered(String deviceId);
+  void onDeviceDiscovered(String deviceId, String deviceName);
 
   void onDeviceLost(String deviceId);
 }
@@ -86,7 +106,7 @@ abstract class DiscoveryCallbackApi {
 @HostApi()
 abstract class AdvertiseApi {
   @async
-  int startAdvertise();
+  int startAdvertise(String verificationCode);
 
   @async
   int stopAdvertise();

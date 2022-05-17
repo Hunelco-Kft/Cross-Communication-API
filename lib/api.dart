@@ -141,6 +141,31 @@ class StateResponse {
   }
 }
 
+class DeviceVerificationRequest {
+  DeviceVerificationRequest({
+    this.verificationCode,
+    this.args,
+  });
+
+  String? verificationCode;
+  Map<String?, String?>? args;
+
+  Object encode() {
+    final Map<Object?, Object?> pigeonMap = <Object?, Object?>{};
+    pigeonMap['verificationCode'] = verificationCode;
+    pigeonMap['args'] = args;
+    return pigeonMap;
+  }
+
+  static DeviceVerificationRequest decode(Object message) {
+    final Map<Object?, Object?> pigeonMap = message as Map<Object?, Object?>;
+    return DeviceVerificationRequest(
+      verificationCode: pigeonMap['verificationCode'] as String?,
+      args: (pigeonMap['args'] as Map<Object?, Object?>?)?.cast<String?, String?>(),
+    );
+  }
+}
+
 class _ServerApiCodec extends StandardMessageCodec {
   const _ServerApiCodec();
   @override
@@ -224,6 +249,33 @@ class ServerApi {
       return;
     }
   }
+
+  Future<int> reset() async {
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+        'dev.flutter.pigeon.ServerApi.reset', codec, binaryMessenger: _binaryMessenger);
+    final Map<Object?, Object?>? replyMap =
+        await channel.send(null) as Map<Object?, Object?>?;
+    if (replyMap == null) {
+      throw PlatformException(
+        code: 'channel-error',
+        message: 'Unable to establish connection on channel.',
+      );
+    } else if (replyMap['error'] != null) {
+      final Map<Object?, Object?> error = (replyMap['error'] as Map<Object?, Object?>?)!;
+      throw PlatformException(
+        code: (error['code'] as String?)!,
+        message: error['message'] as String?,
+        details: error['details'],
+      );
+    } else if (replyMap['result'] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (replyMap['result'] as int?)!;
+    }
+  }
 }
 
 class _ClientApiCodec extends StandardMessageCodec {
@@ -282,6 +334,33 @@ class ClientApi {
       return;
     }
   }
+
+  Future<int> reset() async {
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+        'dev.flutter.pigeon.ClientApi.reset', codec, binaryMessenger: _binaryMessenger);
+    final Map<Object?, Object?>? replyMap =
+        await channel.send(null) as Map<Object?, Object?>?;
+    if (replyMap == null) {
+      throw PlatformException(
+        code: 'channel-error',
+        message: 'Unable to establish connection on channel.',
+      );
+    } else if (replyMap['error'] != null) {
+      final Map<Object?, Object?> error = (replyMap['error'] as Map<Object?, Object?>?)!;
+      throw PlatformException(
+        code: (error['code'] as String?)!,
+        message: error['message'] as String?,
+        details: error['details'],
+      );
+    } else if (replyMap['result'] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (replyMap['result'] as int?)!;
+    }
+  }
 }
 
 class _ConnectionApiCodec extends StandardMessageCodec {
@@ -319,11 +398,11 @@ class ConnectionApi {
 
   static const MessageCodec<Object?> codec = _ConnectionApiCodec();
 
-  Future<ConnectedDevice> connect(String arg_endpointId, String arg_displayName) async {
+  Future<ConnectedDevice> connect(String arg_toDeviceId, String arg_displayName) async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.ConnectionApi.connect', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
-        await channel.send(<Object>[arg_endpointId, arg_displayName]) as Map<Object?, Object?>?;
+        await channel.send(<Object>[arg_toDeviceId, arg_displayName]) as Map<Object?, Object?>?;
     if (replyMap == null) {
       throw PlatformException(
         code: 'channel-error',
@@ -351,33 +430,6 @@ class ConnectionApi {
         'dev.flutter.pigeon.ConnectionApi.disconnect', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
         await channel.send(<Object>[arg_id]) as Map<Object?, Object?>?;
-    if (replyMap == null) {
-      throw PlatformException(
-        code: 'channel-error',
-        message: 'Unable to establish connection on channel.',
-      );
-    } else if (replyMap['error'] != null) {
-      final Map<Object?, Object?> error = (replyMap['error'] as Map<Object?, Object?>?)!;
-      throw PlatformException(
-        code: (error['code'] as String?)!,
-        message: error['message'] as String?,
-        details: error['details'],
-      );
-    } else if (replyMap['result'] == null) {
-      throw PlatformException(
-        code: 'null-error',
-        message: 'Host platform returned null value for non-null return value.',
-      );
-    } else {
-      return (replyMap['result'] as int?)!;
-    }
-  }
-
-  Future<int> reset() async {
-    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-        'dev.flutter.pigeon.ConnectionApi.reset', codec, binaryMessenger: _binaryMessenger);
-    final Map<Object?, Object?>? replyMap =
-        await channel.send(null) as Map<Object?, Object?>?;
     if (replyMap == null) {
       throw PlatformException(
         code: 'channel-error',
@@ -428,7 +480,7 @@ class _ConnectionCallbackApiCodec extends StandardMessageCodec {
 abstract class ConnectionCallbackApi {
   static const MessageCodec<Object?> codec = _ConnectionCallbackApiCodec();
 
-  bool onDeviceConnected(ConnectedDevice device);
+  void onDeviceConnected(ConnectedDevice device);
   void onDeviceDisconnected(ConnectedDevice device);
   static void setup(ConnectionCallbackApi? api, {BinaryMessenger? binaryMessenger}) {
     {
@@ -442,8 +494,8 @@ abstract class ConnectionCallbackApi {
           final List<Object?> args = (message as List<Object?>?)!;
           final ConnectedDevice? arg_device = (args[0] as ConnectedDevice?);
           assert(arg_device != null, 'Argument for dev.flutter.pigeon.ConnectionCallbackApi.onDeviceConnected was null, expected non-null ConnectedDevice.');
-          final bool output = api.onDeviceConnected(arg_device!);
-          return output;
+          api.onDeviceConnected(arg_device!);
+          return;
         });
       }
     }
@@ -460,6 +512,126 @@ abstract class ConnectionCallbackApi {
           assert(arg_device != null, 'Argument for dev.flutter.pigeon.ConnectionCallbackApi.onDeviceDisconnected was null, expected non-null ConnectedDevice.');
           api.onDeviceDisconnected(arg_device!);
           return;
+        });
+      }
+    }
+  }
+}
+
+class _DeviceVerificationApiCodec extends StandardMessageCodec {
+  const _DeviceVerificationApiCodec();
+  @override
+  void writeValue(WriteBuffer buffer, Object? value) {
+    if (value is DeviceVerificationRequest) {
+      buffer.putUint8(128);
+      writeValue(buffer, value.encode());
+    } else 
+{
+      super.writeValue(buffer, value);
+    }
+  }
+  @override
+  Object? readValueOfType(int type, ReadBuffer buffer) {
+    switch (type) {
+      case 128:       
+        return DeviceVerificationRequest.decode(readValue(buffer)!);
+      
+      default:      
+        return super.readValueOfType(type, buffer);
+      
+    }
+  }
+}
+
+class DeviceVerificationApi {
+  /// Constructor for [DeviceVerificationApi].  The [binaryMessenger] named argument is
+  /// available for dependency injection.  If it is left null, the default
+  /// BinaryMessenger will be used which routes to the host platform.
+  DeviceVerificationApi({BinaryMessenger? binaryMessenger}) : _binaryMessenger = binaryMessenger;
+
+  final BinaryMessenger? _binaryMessenger;
+
+  static const MessageCodec<Object?> codec = _DeviceVerificationApiCodec();
+
+  Future<Map<String?, String?>> requestDeviceVerification(String arg_toDeviceId, DeviceVerificationRequest arg_request) async {
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+        'dev.flutter.pigeon.DeviceVerificationApi.requestDeviceVerification', codec, binaryMessenger: _binaryMessenger);
+    final Map<Object?, Object?>? replyMap =
+        await channel.send(<Object>[arg_toDeviceId, arg_request]) as Map<Object?, Object?>?;
+    if (replyMap == null) {
+      throw PlatformException(
+        code: 'channel-error',
+        message: 'Unable to establish connection on channel.',
+      );
+    } else if (replyMap['error'] != null) {
+      final Map<Object?, Object?> error = (replyMap['error'] as Map<Object?, Object?>?)!;
+      throw PlatformException(
+        code: (error['code'] as String?)!,
+        message: error['message'] as String?,
+        details: error['details'],
+      );
+    } else if (replyMap['result'] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (replyMap['result'] as Map<Object?, Object?>?)!.cast<String?, String?>();
+    }
+  }
+}
+
+class _DeviceVerificationCallbackApiCodec extends StandardMessageCodec {
+  const _DeviceVerificationCallbackApiCodec();
+  @override
+  void writeValue(WriteBuffer buffer, Object? value) {
+    if (value is ConnectedDevice) {
+      buffer.putUint8(128);
+      writeValue(buffer, value.encode());
+    } else 
+    if (value is DeviceVerificationRequest) {
+      buffer.putUint8(129);
+      writeValue(buffer, value.encode());
+    } else 
+{
+      super.writeValue(buffer, value);
+    }
+  }
+  @override
+  Object? readValueOfType(int type, ReadBuffer buffer) {
+    switch (type) {
+      case 128:       
+        return ConnectedDevice.decode(readValue(buffer)!);
+      
+      case 129:       
+        return DeviceVerificationRequest.decode(readValue(buffer)!);
+      
+      default:      
+        return super.readValueOfType(type, buffer);
+      
+    }
+  }
+}
+abstract class DeviceVerificationCallbackApi {
+  static const MessageCodec<Object?> codec = _DeviceVerificationCallbackApiCodec();
+
+  Map<String?, String?> onDeviceVerified(ConnectedDevice device, DeviceVerificationRequest request);
+  static void setup(DeviceVerificationCallbackApi? api, {BinaryMessenger? binaryMessenger}) {
+    {
+      final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.DeviceVerificationCallbackApi.onDeviceVerified', codec, binaryMessenger: binaryMessenger);
+      if (api == null) {
+        channel.setMessageHandler(null);
+      } else {
+        channel.setMessageHandler((Object? message) async {
+          assert(message != null, 'Argument for dev.flutter.pigeon.DeviceVerificationCallbackApi.onDeviceVerified was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final ConnectedDevice? arg_device = (args[0] as ConnectedDevice?);
+          assert(arg_device != null, 'Argument for dev.flutter.pigeon.DeviceVerificationCallbackApi.onDeviceVerified was null, expected non-null ConnectedDevice.');
+          final DeviceVerificationRequest? arg_request = (args[1] as DeviceVerificationRequest?);
+          assert(arg_request != null, 'Argument for dev.flutter.pigeon.DeviceVerificationCallbackApi.onDeviceVerified was null, expected non-null DeviceVerificationRequest.');
+          final Map<String?, String?> output = api.onDeviceVerified(arg_device!, arg_request!);
+          return output;
         });
       }
     }
@@ -541,7 +713,7 @@ class _DiscoveryCallbackApiCodec extends StandardMessageCodec {
 abstract class DiscoveryCallbackApi {
   static const MessageCodec<Object?> codec = _DiscoveryCallbackApiCodec();
 
-  void onDeviceDiscovered(String deviceId);
+  void onDeviceDiscovered(String deviceId, String deviceName);
   void onDeviceLost(String deviceId);
   static void setup(DiscoveryCallbackApi? api, {BinaryMessenger? binaryMessenger}) {
     {
@@ -555,7 +727,9 @@ abstract class DiscoveryCallbackApi {
           final List<Object?> args = (message as List<Object?>?)!;
           final String? arg_deviceId = (args[0] as String?);
           assert(arg_deviceId != null, 'Argument for dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceDiscovered was null, expected non-null String.');
-          api.onDeviceDiscovered(arg_deviceId!);
+          final String? arg_deviceName = (args[1] as String?);
+          assert(arg_deviceName != null, 'Argument for dev.flutter.pigeon.DiscoveryCallbackApi.onDeviceDiscovered was null, expected non-null String.');
+          api.onDeviceDiscovered(arg_deviceId!, arg_deviceName!);
           return;
         });
       }
@@ -593,11 +767,11 @@ class AdvertiseApi {
 
   static const MessageCodec<Object?> codec = _AdvertiseApiCodec();
 
-  Future<int> startAdvertise() async {
+  Future<int> startAdvertise(String arg_verificationCode) async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
         'dev.flutter.pigeon.AdvertiseApi.startAdvertise', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
-        await channel.send(null) as Map<Object?, Object?>?;
+        await channel.send(<Object>[arg_verificationCode]) as Map<Object?, Object?>?;
     if (replyMap == null) {
       throw PlatformException(
         code: 'channel-error',

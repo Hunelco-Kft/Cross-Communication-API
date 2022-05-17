@@ -29,6 +29,7 @@ typedef NS_ENUM(NSUInteger, FLTState) {
 @class FLTDataMessage;
 @class FLTConnectedDevice;
 @class FLTStateResponse;
+@class FLTDeviceVerificationRequest;
 
 @interface FLTConfig : NSObject
 + (instancetype)makeWithName:(nullable NSString *)name
@@ -62,6 +63,13 @@ typedef NS_ENUM(NSUInteger, FLTState) {
 @property(nonatomic, assign) FLTState state;
 @end
 
+@interface FLTDeviceVerificationRequest : NSObject
++ (instancetype)makeWithVerificationCode:(nullable NSString *)verificationCode
+    args:(nullable NSDictionary<NSString *, NSString *> *)args;
+@property(nonatomic, copy, nullable) NSString * verificationCode;
+@property(nonatomic, strong, nullable) NSDictionary<NSString *, NSString *> * args;
+@end
+
 /// The codec used by FLTServerApi.
 NSObject<FlutterMessageCodec> *FLTServerApiGetCodec(void);
 
@@ -70,6 +78,8 @@ NSObject<FlutterMessageCodec> *FLTServerApiGetCodec(void);
 - (void)startServerConfig:(nullable FLTConfig *)config completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 /// @return `nil` only when `error != nil`.
 - (void)stopServerWithError:(FlutterError *_Nullable *_Nonnull)error;
+/// @return `nil` only when `error != nil`.
+- (void)resetWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 @end
 
 extern void FLTServerApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTServerApi> *_Nullable api);
@@ -80,6 +90,8 @@ NSObject<FlutterMessageCodec> *FLTClientApiGetCodec(void);
 @protocol FLTClientApi
 /// @return `nil` only when `error != nil`.
 - (void)startClientConfig:(FLTConfig *)config error:(FlutterError *_Nullable *_Nonnull)error;
+/// @return `nil` only when `error != nil`.
+- (void)resetWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 @end
 
 extern void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTClientApi> *_Nullable api);
@@ -89,11 +101,9 @@ NSObject<FlutterMessageCodec> *FLTConnectionApiGetCodec(void);
 
 @protocol FLTConnectionApi
 /// @return `nil` only when `error != nil`.
-- (void)connectEndpointId:(nullable NSString *)endpointId displayName:(nullable NSString *)displayName completion:(void(^)(FLTConnectedDevice *_Nullable, FlutterError *_Nullable))completion;
+- (void)connectToDeviceId:(nullable NSString *)toDeviceId displayName:(nullable NSString *)displayName completion:(void(^)(FLTConnectedDevice *_Nullable, FlutterError *_Nullable))completion;
 /// @return `nil` only when `error != nil`.
 - (void)disconnectId:(nullable NSString *)id completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
-/// @return `nil` only when `error != nil`.
-- (void)resetWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 @end
 
 extern void FLTConnectionApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTConnectionApi> *_Nullable api);
@@ -103,8 +113,25 @@ NSObject<FlutterMessageCodec> *FLTConnectionCallbackApiGetCodec(void);
 
 @interface FLTConnectionCallbackApi : NSObject
 - (instancetype)initWithBinaryMessenger:(id<FlutterBinaryMessenger>)binaryMessenger;
-- (void)onDeviceConnectedDevice:(FLTConnectedDevice *)device completion:(void(^)(NSNumber *_Nullable, NSError *_Nullable))completion;
+- (void)onDeviceConnectedDevice:(FLTConnectedDevice *)device completion:(void(^)(NSError *_Nullable))completion;
 - (void)onDeviceDisconnectedDevice:(FLTConnectedDevice *)device completion:(void(^)(NSError *_Nullable))completion;
+@end
+/// The codec used by FLTDeviceVerificationApi.
+NSObject<FlutterMessageCodec> *FLTDeviceVerificationApiGetCodec(void);
+
+@protocol FLTDeviceVerificationApi
+/// @return `nil` only when `error != nil`.
+- (void)requestDeviceVerificationToDeviceId:(nullable NSString *)toDeviceId request:(nullable FLTDeviceVerificationRequest *)request completion:(void(^)(NSDictionary<NSString *, NSString *> *_Nullable, FlutterError *_Nullable))completion;
+@end
+
+extern void FLTDeviceVerificationApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTDeviceVerificationApi> *_Nullable api);
+
+/// The codec used by FLTDeviceVerificationCallbackApi.
+NSObject<FlutterMessageCodec> *FLTDeviceVerificationCallbackApiGetCodec(void);
+
+@interface FLTDeviceVerificationCallbackApi : NSObject
+- (instancetype)initWithBinaryMessenger:(id<FlutterBinaryMessenger>)binaryMessenger;
+- (void)onDeviceVerifiedDevice:(FLTConnectedDevice *)device request:(FLTDeviceVerificationRequest *)request completion:(void(^)(NSDictionary<NSString *, NSString *> *_Nullable, NSError *_Nullable))completion;
 @end
 /// The codec used by FLTDiscoveryApi.
 NSObject<FlutterMessageCodec> *FLTDiscoveryApiGetCodec(void);
@@ -123,7 +150,7 @@ NSObject<FlutterMessageCodec> *FLTDiscoveryCallbackApiGetCodec(void);
 
 @interface FLTDiscoveryCallbackApi : NSObject
 - (instancetype)initWithBinaryMessenger:(id<FlutterBinaryMessenger>)binaryMessenger;
-- (void)onDeviceDiscoveredDeviceId:(NSString *)deviceId completion:(void(^)(NSError *_Nullable))completion;
+- (void)onDeviceDiscoveredDeviceId:(NSString *)deviceId deviceName:(NSString *)deviceName completion:(void(^)(NSError *_Nullable))completion;
 - (void)onDeviceLostDeviceId:(NSString *)deviceId completion:(void(^)(NSError *_Nullable))completion;
 @end
 /// The codec used by FLTAdvertiseApi.
@@ -131,7 +158,7 @@ NSObject<FlutterMessageCodec> *FLTAdvertiseApiGetCodec(void);
 
 @protocol FLTAdvertiseApi
 /// @return `nil` only when `error != nil`.
-- (void)startAdvertiseWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
+- (void)startAdvertiseVerificationCode:(nullable NSString *)verificationCode completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 /// @return `nil` only when `error != nil`.
 - (void)stopAdvertiseWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 @end
