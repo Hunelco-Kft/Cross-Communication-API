@@ -144,16 +144,22 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         coroutineScope.launch {
             try {
                 if (verificationCode != null)
-                    sessionManager.verificationCode.value = verificationCode
+                    withContext(Dispatchers.Main) {
+                        sessionManager.verificationCode.value = verificationCode
+                    }
 
                 gattManager?.startAdvertise()
                 nearbyManager?.startAdvertise()
 
                 isAdvertising.set(true)
-                result?.success(0)
+                withContext(Dispatchers.Main) {
+                    result?.success(0)
+                }
             } catch (ex: Exception) {
                 Timber.e(ex, "Couldn't start Advertising")
-                result?.error(ex)
+                withContext(Dispatchers.Main) {
+                    result?.error(ex)
+                }
             }
         }
     }
