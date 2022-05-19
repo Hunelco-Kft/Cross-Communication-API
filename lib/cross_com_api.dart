@@ -41,6 +41,14 @@ class SignallerStateEvent {
   SignallerStateEvent({required this.signaller, required this.state});
 }
 
+class VerifiedDevice {
+  ConnectedDevice device;
+
+  DeviceVerificationRequest request;
+
+  VerifiedDevice({required this.device, required this.request});
+}
+
 enum BroadcastType { none, server, client }
 
 abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, StateCallbackApi, DeviceVerificationCallbackApi {
@@ -80,6 +88,11 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   final _onSignallerStateStreamController = StreamController<SignallerStateEvent>();
   Stream<SignallerStateEvent> get onSignallerState {
     return _onSignallerStateStreamController.stream;
+  }
+
+  final _onDeviceVerifiedStreamController = StreamController<VerifiedDevice>();
+  Stream<VerifiedDevice> get onDeviceVerified {
+    return _onDeviceVerifiedStreamController;
   }
 
   final ConnectionApi _connectionApi = ConnectionApi(binaryMessenger: _channel.binaryMessenger);
@@ -153,6 +166,7 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
 
   @override
   Map<String, String> onDeviceVerified(ConnectedDevice device, DeviceVerificationRequest request) {
+    _onDeviceVerifiedStreamController.add(VerifiedDevice(device: device, request: request));
     return verifiedDeviceMeta;
   }
 }
@@ -200,7 +214,7 @@ class CrossComServerApi extends BaseApi {
   }
 
   Future<void> reset() {
-    return _api.reset();
+    return _advertiseApi.reset();
   }
 
   Future<void> startAdvertise(String verificationCode) async {
