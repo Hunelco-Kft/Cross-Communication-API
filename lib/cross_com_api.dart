@@ -47,6 +47,9 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   static const MethodChannel _channel = MethodChannel('cross_com_api', JSONMethodCodec());
 
   static BroadcastType _broadcastType = BroadcastType.none;
+  BroadcastType get broadcastType {
+    return _broadcastType;
+  }
 
   final FlutterBluePlus _flutterBlue = FlutterBluePlus.instance;
   final _characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
@@ -212,8 +215,13 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
   CrossComClientApi._internal();
 
+  bool _isDiscovering = false;
+  get isDiscovering {
+    return _isDiscovering;
+  }
+
   final _onDeviceDiscoveredStreamController = StreamController<DeviceInfo>();
-  Stream<DeviceInfo> get _onDeviceDiscovered {
+  Stream<DeviceInfo> get onDeviceDiscover {
     return _onDeviceDiscoveredStreamController.stream;
   }
 
@@ -221,7 +229,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   final DiscoveryApi _discoveryApi = DiscoveryApi(binaryMessenger: BaseApi._channel.binaryMessenger);
 
   late StreamSubscription<List<ScanResult>> _scanStream;
-  Map<String, BluetoothDevice> _scannedDevices = {};
+  final Map<String, BluetoothDevice> _scannedDevices = {};
 
   Future<void> startClient(
       {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) async {
@@ -272,6 +280,8 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   }
 
   Future<void> startDiscovery({int timeoutInSeconds = 10000000}) async {
+    if (_isDiscovering) return;
+
     if (Platform.isAndroid) {
       await _discoveryApi.startDiscovery();
     } else {
@@ -279,15 +289,20 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       await _flutterBlue.startScan(
           scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [_serviceUuid], timeout: Duration(seconds: timeoutInSeconds));
     }
+    _isDiscovering = true;
   }
 
   Future<void> stopDiscovery() async {
+    if (!_isDiscovering) return;
+
     if (Platform.isAndroid) {
       await _discoveryApi.stopDiscovery();
     } else {
       await _flutterBlue.stopScan();
       _scannedDevices.clear();
     }
+
+    _isDiscovering = false;
   }
 
   @override
