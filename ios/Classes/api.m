@@ -241,24 +241,6 @@ void FLTServerApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTS
       [channel setMessageHandler:nil];
     }
   }
-  {
-    FlutterBasicMessageChannel *channel =
-      [FlutterBasicMessageChannel
-        messageChannelWithName:@"dev.flutter.pigeon.ServerApi.reset"
-        binaryMessenger:binaryMessenger
-        codec:FLTServerApiGetCodec()];
-    if (api) {
-      NSCAssert([api respondsToSelector:@selector(resetWithCompletion:)], @"FLTServerApi api (%@) doesn't respond to @selector(resetWithCompletion:)", api);
-      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        [api resetWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
-          callback(wrapResult(output, error));
-        }];
-      }];
-    }
-    else {
-      [channel setMessageHandler:nil];
-    }
-  }
 }
 @interface FLTClientApiCodecReader : FlutterStandardReader
 @end
@@ -328,24 +310,6 @@ void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTC
         FlutterError *error;
         [api startClientConfig:arg_config error:&error];
         callback(wrapResult(nil, error));
-      }];
-    }
-    else {
-      [channel setMessageHandler:nil];
-    }
-  }
-  {
-    FlutterBasicMessageChannel *channel =
-      [FlutterBasicMessageChannel
-        messageChannelWithName:@"dev.flutter.pigeon.ClientApi.reset"
-        binaryMessenger:binaryMessenger
-        codec:FLTClientApiGetCodec()];
-    if (api) {
-      NSCAssert([api respondsToSelector:@selector(resetWithCompletion:)], @"FLTClientApi api (%@) doesn't respond to @selector(resetWithCompletion:)", api);
-      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        [api resetWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
-          callback(wrapResult(output, error));
-        }];
       }];
     }
     else {
@@ -896,6 +860,24 @@ void FLTAdvertiseApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<F
       NSCAssert([api respondsToSelector:@selector(stopAdvertiseWithCompletion:)], @"FLTAdvertiseApi api (%@) doesn't respond to @selector(stopAdvertiseWithCompletion:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
         [api stopAdvertiseWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+          callback(wrapResult(output, error));
+        }];
+      }];
+    }
+    else {
+      [channel setMessageHandler:nil];
+    }
+  }
+  {
+    FlutterBasicMessageChannel *channel =
+      [FlutterBasicMessageChannel
+        messageChannelWithName:@"dev.flutter.pigeon.AdvertiseApi.reset"
+        binaryMessenger:binaryMessenger
+        codec:FLTAdvertiseApiGetCodec()];
+    if (api) {
+      NSCAssert([api respondsToSelector:@selector(resetWithCompletion:)], @"FLTAdvertiseApi api (%@) doesn't respond to @selector(resetWithCompletion:)", api);
+      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
+        [api resetWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
           callback(wrapResult(output, error));
         }];
       }];

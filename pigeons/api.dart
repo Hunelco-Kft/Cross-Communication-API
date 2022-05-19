@@ -47,17 +47,11 @@ abstract class ServerApi {
   int startServer(Config config);
 
   void stopServer();
-
-  @async
-  int reset();
 }
 
 @HostApi()
 abstract class ClientApi {
   void startClient(Config config);
-
-  @async
-  int reset();
 }
 
 @HostApi()
@@ -110,6 +104,9 @@ abstract class AdvertiseApi {
 
   @async
   int stopAdvertise();
+
+  @async
+  int reset();
 }
 
 @HostApi()

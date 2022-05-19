@@ -105,9 +105,8 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
         result.success(0)
     }
 
-    override fun reset(result: Pigeon.Result<Long>) {
+    fun reset() {
         stopClient()
-        result.success(0)
     }
 
     suspend fun startDiscovery() {

@@ -358,7 +358,6 @@ public class Pigeon {
   public interface ServerApi {
     void startServer(Config config, Result<Long> result);
     @NonNull void stopServer();
-    void reset(Result<Long> result);
 
     /** The codec used by ServerApi. */
     static MessageCodec<Object> getCodec() {
@@ -420,35 +419,6 @@ public class Pigeon {
           channel.setMessageHandler(null);
         }
       }
-      {
-        BasicMessageChannel<Object> channel =
-            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ServerApi.reset", getCodec());
-        if (api != null) {
-          channel.setMessageHandler((message, reply) -> {
-            Map<String, Object> wrapped = new HashMap<>();
-            try {
-              Result<Long> resultCallback = new Result<Long>() {
-                public void success(Long result) {
-                  wrapped.put("result", result);
-                  reply.reply(wrapped);
-                }
-                public void error(Throwable error) {
-                  wrapped.put("error", wrapError(error));
-                  reply.reply(wrapped);
-                }
-              };
-
-              api.reset(resultCallback);
-            }
-            catch (Error | RuntimeException exception) {
-              wrapped.put("error", wrapError(exception));
-              reply.reply(wrapped);
-            }
-          });
-        } else {
-          channel.setMessageHandler(null);
-        }
-      }
     }
   }
   private static class ClientApiCodec extends StandardMessageCodec {
@@ -480,7 +450,6 @@ public class Pigeon {
   /** Generated interface from Pigeon that represents a handler of messages from Flutter.*/
   public interface ClientApi {
     @NonNull void startClient(Config config);
-    void reset(Result<Long> result);
 
     /** The codec used by ClientApi. */
     static MessageCodec<Object> getCodec() {
@@ -508,35 +477,6 @@ public class Pigeon {
               wrapped.put("error", wrapError(exception));
             }
             reply.reply(wrapped);
-          });
-        } else {
-          channel.setMessageHandler(null);
-        }
-      }
-      {
-        BasicMessageChannel<Object> channel =
-            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ClientApi.reset", getCodec());
-        if (api != null) {
-          channel.setMessageHandler((message, reply) -> {
-            Map<String, Object> wrapped = new HashMap<>();
-            try {
-              Result<Long> resultCallback = new Result<Long>() {
-                public void success(Long result) {
-                  wrapped.put("result", result);
-                  reply.reply(wrapped);
-                }
-                public void error(Throwable error) {
-                  wrapped.put("error", wrapError(error));
-                  reply.reply(wrapped);
-                }
-              };
-
-              api.reset(resultCallback);
-            }
-            catch (Error | RuntimeException exception) {
-              wrapped.put("error", wrapError(exception));
-              reply.reply(wrapped);
-            }
           });
         } else {
           channel.setMessageHandler(null);
@@ -962,6 +902,7 @@ public class Pigeon {
   public interface AdvertiseApi {
     void startAdvertise(String verificationCode, Result<Long> result);
     void stopAdvertise(Result<Long> result);
+    void reset(Result<Long> result);
 
     /** The codec used by AdvertiseApi. */
     static MessageCodec<Object> getCodec() {
@@ -1023,6 +964,35 @@ public class Pigeon {
               };
 
               api.stopAdvertise(resultCallback);
+            }
+            catch (Error | RuntimeException exception) {
+              wrapped.put("error", wrapError(exception));
+              reply.reply(wrapped);
+            }
+          });
+        } else {
+          channel.setMessageHandler(null);
+        }
+      }
+      {
+        BasicMessageChannel<Object> channel =
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.AdvertiseApi.reset", getCodec());
+        if (api != null) {
+          channel.setMessageHandler((message, reply) -> {
+            Map<String, Object> wrapped = new HashMap<>();
+            try {
+              Result<Long> resultCallback = new Result<Long>() {
+                public void success(Long result) {
+                  wrapped.put("result", result);
+                  reply.reply(wrapped);
+                }
+                public void error(Throwable error) {
+                  wrapped.put("error", wrapError(error));
+                  reply.reply(wrapped);
+                }
+              };
+
+              api.reset(resultCallback);
             }
             catch (Error | RuntimeException exception) {
               wrapped.put("error", wrapError(exception));

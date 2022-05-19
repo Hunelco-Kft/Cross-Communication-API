@@ -179,6 +179,11 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         }
     }
 
+    override fun reset(result: Pigeon.Result<Long>?) {
+        // TODO
+        stopAdvertise(result)
+    }
+
     override fun sendMessage(
         id: String, endpoint: String, payload: String,
         result: Pigeon.Result<Long>?

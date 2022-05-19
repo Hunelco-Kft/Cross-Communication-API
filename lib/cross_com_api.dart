@@ -167,6 +167,11 @@ class CrossComServerApi extends BaseApi {
 
   CrossComServerApi._internal();
 
+  bool _isAdvertising = false;
+  get isAdvertising {
+    return _isAdvertising;
+  }
+
   final ServerApi _api = ServerApi(binaryMessenger: BaseApi._channel.binaryMessenger);
   final AdvertiseApi _advertiseApi = AdvertiseApi(binaryMessenger: BaseApi._channel.binaryMessenger);
 
@@ -187,8 +192,10 @@ class CrossComServerApi extends BaseApi {
       throw Exception("The server is in a bad state ${BaseApi._broadcastType}");
     }
 
-    _connectedDevices.clear();
+    await stopAdvertise();
     await _api.stopServer();
+
+    _connectedDevices.clear();
     BaseApi._broadcastType = BroadcastType.none;
   }
 
@@ -196,12 +203,18 @@ class CrossComServerApi extends BaseApi {
     return _api.reset();
   }
 
-  Future<void> startAdvertise(String verificationCode) {
-    return _advertiseApi.startAdvertise(verificationCode);
+  Future<void> startAdvertise(String verificationCode) async {
+    if (_isAdvertising) return;
+
+    await _advertiseApi.startAdvertise(verificationCode);
+    _isAdvertising = true;
   }
 
-  Future<void> stopAdvertise() {
-    return _advertiseApi.stopAdvertise();
+  Future<void> stopAdvertise() async {
+    if (!_isAdvertising) return;
+
+    await _advertiseApi.stopAdvertise();
+    _isAdvertising = false;
   }
 }
 
@@ -254,6 +267,8 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     if (BaseApi._broadcastType != BroadcastType.client) {
       throw Exception("The client is in a bad state ${BaseApi._broadcastType}");
     }
+
+    stopDiscovery();
 
     _scanStream.cancel();
     _connectedDevices.clear();

@@ -78,8 +78,6 @@ NSObject<FlutterMessageCodec> *FLTServerApiGetCodec(void);
 - (void)startServerConfig:(nullable FLTConfig *)config completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 /// @return `nil` only when `error != nil`.
 - (void)stopServerWithError:(FlutterError *_Nullable *_Nonnull)error;
-/// @return `nil` only when `error != nil`.
-- (void)resetWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 @end
 
 extern void FLTServerApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTServerApi> *_Nullable api);
@@ -90,8 +88,6 @@ NSObject<FlutterMessageCodec> *FLTClientApiGetCodec(void);
 @protocol FLTClientApi
 /// @return `nil` only when `error != nil`.
 - (void)startClientConfig:(FLTConfig *)config error:(FlutterError *_Nullable *_Nonnull)error;
-/// @return `nil` only when `error != nil`.
-- (void)resetWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 @end
 
 extern void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTClientApi> *_Nullable api);
@@ -161,6 +157,8 @@ NSObject<FlutterMessageCodec> *FLTAdvertiseApiGetCodec(void);
 - (void)startAdvertiseVerificationCode:(nullable NSString *)verificationCode completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 /// @return `nil` only when `error != nil`.
 - (void)stopAdvertiseWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
+/// @return `nil` only when `error != nil`.
+- (void)resetWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 @end
 
 extern void FLTAdvertiseApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTAdvertiseApi> *_Nullable api);
