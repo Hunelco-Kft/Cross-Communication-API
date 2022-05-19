@@ -53,6 +53,7 @@ enum BroadcastType { none, server, client }
 
 abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, StateCallbackApi, DeviceVerificationCallbackApi {
   static const MethodChannel _channel = MethodChannel('cross_com_api', JSONMethodCodec());
+  static const String _verifyDeviceEndpoint = '/verifyDevice';
 
   static BroadcastType _broadcastType = BroadcastType.none;
   BroadcastType get broadcastType {
@@ -91,8 +92,8 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   }
 
   final _onDeviceVerifiedStreamController = StreamController<VerifiedDevice>();
-  Stream<VerifiedDevice> get onDeviceVerified {
-    return _onDeviceVerifiedStreamController;
+  Stream<VerifiedDevice> get onVerifiedDevice {
+    return _onDeviceVerifiedStreamController.stream;
   }
 
   final ConnectionApi _connectionApi = ConnectionApi(binaryMessenger: _channel.binaryMessenger);
@@ -127,9 +128,9 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
     return _commApi.sendMessageToVerifiedDevice(endpoint, data);
   }
 
-  Future<Map<String, String>> requestDeviceVerification(String toDevice, String code, Map<String, String> args) async {
+  Future<Map<String?, String?>> requestDeviceVerification(String toDevice, String code, Map<String, String> args) async {
     final request = DeviceVerificationRequest(verificationCode: code, args: args);
-    return _deviceVerificationApi.requestDeviceVerification(toDevice, request) as Map<String, String>;
+    return await _deviceVerificationApi.requestDeviceVerification(toDevice, request);
   }
 
   @override
@@ -247,7 +248,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     return _isDiscovering;
   }
 
-  final _onDeviceDiscoveredStreamController = StreamController<DeviceInfo>();
+  final _onDeviceDiscoveredStreamController = StreamController<DeviceInfo>.broadcast();
   Stream<DeviceInfo> get onDeviceDiscover {
     return _onDeviceDiscoveredStreamController.stream;
   }

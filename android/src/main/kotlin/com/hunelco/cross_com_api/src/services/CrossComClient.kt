@@ -101,18 +101,20 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
             val serializedPayload = gson.toJson(dataPayload, DataPayload::class.java)
 
             val observer = MessageObserver()
-            sessionManager.msgLiveData.observeForever(observer)
+            withContext(Dispatchers.Main) {
+                sessionManager.msgLiveData.observeForever(observer)
+            }
             try {
                 client.sendMessage(deviceId, serializedPayload)
                 withTimeout(3000) { observer.wait() }
             } catch (e: TimeoutCancellationException) {
                 observer.exception = e
             } finally {
-                sessionManager.msgLiveData.removeObserver(observer)
                 withContext(Dispatchers.Main) {
-                    if (observer.exception != null) result.error(observer.exception)
-                    else result.success(observer.response!!)
+                    sessionManager.msgLiveData.removeObserver(observer)
                 }
+                if (observer.exception != null) result.error(observer.exception)
+                else result.success(observer.response!!)
             }
         }
     }
