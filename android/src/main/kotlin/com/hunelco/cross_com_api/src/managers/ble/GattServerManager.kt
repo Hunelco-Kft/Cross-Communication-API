@@ -10,6 +10,7 @@ import com.hunelco.cross_com_api.src.managers.ble.profiles.GeneralProfile
 import com.hunelco.cross_com_api.src.models.BleDevice
 import com.hunelco.cross_com_api.src.models.NearbyDevice
 import com.hunelco.cross_com_api.src.models.VerificationResponse
+import com.hunelco.cross_com_api.src.utils.MessageUtils
 import io.flutter.plugins.Pigeon
 import kotlinx.coroutines.coroutineScope
 import no.nordicsemi.android.ble.BleManager
@@ -118,7 +119,7 @@ class GattServerManager private constructor(private val context: Context) :
 
     suspend fun sendMessage(deviceId: String, data: String) {
         val device = sessionManager.getCastedConnection<BleDevice>(deviceId) ?: return
-        device.device.sendMessage(data)
+        device.device.sendMessage(MessageUtils.addEOF(data))
     }
 
     inner class ServerConnection : BleManager(context) {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:cross_com_api/api.dart';
@@ -167,6 +168,7 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
 
   @override
   Map<String, String> onDeviceVerified(ConnectedDevice device, DeviceVerificationRequest request) {
+    log("ONVERIFIED DEVICE....");
     _onDeviceVerifiedStreamController.add(VerifiedDevice(device: device, request: request));
     return verifiedDeviceMeta;
   }

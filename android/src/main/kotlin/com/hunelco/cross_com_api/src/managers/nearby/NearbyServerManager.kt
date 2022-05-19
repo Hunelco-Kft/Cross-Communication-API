@@ -58,11 +58,6 @@ class NearbyServerManager private constructor(context: Context) : NearbyClientMa
         Timber.i("Stop advertising - NearbyServerManager")
     }
 
-    override fun reset(result: Pigeon.Result<Long>) {
-        stopAdvertise()
-        super.reset(result)
-    }
-
     companion object {
         @SuppressLint("StaticFieldLeak")
         private lateinit var instance: NearbyServerManager

@@ -138,7 +138,9 @@ class SessionManager private constructor() {
 
     private fun verifyDevice(deviceId: String, provider: Pigeon.Provider, data: String) {
         val request = gson.fromJson(data, VerificationRequest::class.java)
-        if (request.code == verificationCode.value) {
+        Timber.i("DDDDD - ${request.code} - ${verificationCode.value}")
+        // TODO
+        // if (request.code == verificationCode.value) {
             val verifiedConnection = Pigeon.ConnectedDevice.Builder()
                 .setDeviceId(deviceId)
                 .setProvider(provider)
@@ -149,12 +151,13 @@ class SessionManager private constructor() {
                 .setArgs(request.args)
                 .build()
 
+            Timber.i("CALL - onDeviceVERIFIED")
             verificationCallbackApi?.onDeviceVerified(verifiedConnection, devRequest) {
                 _verifiedDevice.value = getConnection(deviceId)!!.apply {
                     args = it
                 }
             }
-        }
+        // }
     }
 
     companion object {

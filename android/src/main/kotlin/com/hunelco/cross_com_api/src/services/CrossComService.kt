@@ -195,8 +195,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         result: Pigeon.Result<Long>?
     ) {
         val dataPayload = DataPayload(endpoint, payload)
-        val serializedPayload =
-            MessageUtils.addEOF(gson.toJson(dataPayload, DataPayload::class.java))
+        val serializedPayload = gson.toJson(dataPayload, DataPayload::class.java)
 
         coroutineScope.launch {
             try {
