@@ -29,6 +29,11 @@ class SessionManager private constructor() {
     val verifiedDevice: LiveData<ConnectedDevice<*>?>
         get() = _verifiedDevice
 
+    fun setVerifiedDevice(deviceId: String) {
+        val connectedDevice = getConnection(deviceId) ?: return
+        _verifiedDevice.value = connectedDevice
+    }
+
     private val _msgLiveData = MutableLiveData<Pigeon.DataMessage>()
     val msgLiveData: LiveData<Pigeon.DataMessage>
         get() = _msgLiveData

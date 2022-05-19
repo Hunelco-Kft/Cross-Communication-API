@@ -65,7 +65,7 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   final _characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
   final _serviceUuid = Guid("00001111-0000-1000-8000-00805F9B34FB");
 
-  final _onDeviceStateStreamController = StreamController<DeviceStateEvent>();
+  final _onDeviceStateStreamController = StreamController<DeviceStateEvent>.broadcast();
   Stream<DeviceStateEvent> get onDeviceStateStream {
     return _onDeviceStateStreamController.stream;
   }
@@ -77,12 +77,12 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
     return {..._connectedDevices};
   }
 
-  final _onMessageStreamController = StreamController<DataMessage>();
+  final _onMessageStreamController = StreamController<DataMessage>.broadcast();
   Stream<DataMessage> get onMessage {
     return _onMessageStreamController.stream;
   }
 
-  final _onRawMessageStreamController = StreamController<RawMessage>();
+  final _onRawMessageStreamController = StreamController<RawMessage>.broadcast();
   Stream<RawMessage> get onRawMessage {
     return _onRawMessageStreamController.stream;
   }
@@ -92,7 +92,7 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
     return _onSignallerStateStreamController.stream;
   }
 
-  final _onDeviceVerifiedStreamController = StreamController<VerifiedDevice>();
+  final _onDeviceVerifiedStreamController = StreamController<VerifiedDevice>.broadcast();
   Stream<VerifiedDevice> get onVerifiedDevice {
     return _onDeviceVerifiedStreamController.stream;
   }

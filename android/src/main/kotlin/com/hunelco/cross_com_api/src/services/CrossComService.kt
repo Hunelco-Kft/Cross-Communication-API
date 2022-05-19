@@ -213,6 +213,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         data: String,
         result: Pigeon.Result<Long>?
     ) {
+        Timber.d("VERIFIED DEVICE ${sessionManager.verifiedDevice.value}")
         val verifiedDeviceId = sessionManager.verifiedDevice.value?.id
             ?: return result?.success(0) ?: Unit
         return sendMessage(verifiedDeviceId, endpoint, data, result)

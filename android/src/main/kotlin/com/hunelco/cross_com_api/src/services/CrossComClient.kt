@@ -140,6 +140,7 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
             if (t.endpoint == SessionManager.ENDPOINT_VERIFICATION) {
                 try {
                     response = gson.fromJson(t.data, VerificationResponse::class.java).args
+                    sessionManager.setVerifiedDevice(t.deviceId!!)
                 } catch (ex: Exception) {
                     exception = ex
                 }
