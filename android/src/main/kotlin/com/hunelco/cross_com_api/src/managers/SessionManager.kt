@@ -29,6 +29,10 @@ class SessionManager private constructor() {
     val verifiedDevice: LiveData<ConnectedDevice<*>?>
         get() = _verifiedDevice
 
+    private val _verificationFailed = MutableLiveData<ConnectedDevice<*>?>()
+    val verificationFailed: LiveData<ConnectedDevice<*>?>
+        get() = _verificationFailed
+
     fun setVerifiedDevice(deviceId: String) {
         val connectedDevice = getConnection(deviceId) ?: return
         _verifiedDevice.value = connectedDevice
@@ -117,8 +121,7 @@ class SessionManager private constructor() {
             }.build()
 
             if (dataPayload.endpoint == ENDPOINT_VERIFICATION) {
-                val response = verifyDevice(deviceId, provider, data)
-                _msgLiveData.value = dataMsg
+                verifyDevice(deviceId, provider, dataPayload)
                 return
             }
 
@@ -141,32 +144,37 @@ class SessionManager private constructor() {
         discoveryCallbackApi?.onDeviceLost(deviceId) {}
     }
 
-    private fun verifyDevice(deviceId: String, provider: Pigeon.Provider, data: String) {
-        val request = gson.fromJson(data, VerificationRequest::class.java)
-        Timber.i("DDDDD - ${request.code} - ${verificationCode.value}")
-        // TODO
-        // if (request.code == verificationCode.value) {
-            val verifiedConnection = Pigeon.ConnectedDevice.Builder()
-                .setDeviceId(deviceId)
-                .setProvider(provider)
-                .build()
+    private fun verifyDevice(deviceId: String, provider: Pigeon.Provider, payload: DataPayload)
+            : Boolean {
+        try {
+            val request = gson.fromJson(payload.data, VerificationRequest::class.java)
+            if (request.code == verificationCode.value) {
+                val verifiedConnection = Pigeon.ConnectedDevice.Builder()
+                    .setDeviceId(deviceId)
+                    .setProvider(provider)
+                    .build()
 
-            val devRequest = Pigeon.DeviceVerificationRequest.Builder()
-                .setVerificationCode(request.code)
-                .setArgs(request.args)
-                .build()
+                val devRequest = Pigeon.DeviceVerificationRequest.Builder()
+                    .setVerificationCode(request.code)
+                    .setArgs(request.args)
+                    .build()
 
-            Timber.i("CALL - onDeviceVERIFIED")
-            verificationCallbackApi?.onDeviceVerified(verifiedConnection, devRequest) {
-                _verifiedDevice.value = getConnection(deviceId)!!.apply {
-                    args = it
+                verificationCallbackApi?.onDeviceVerified(verifiedConnection, devRequest) {
+                    _verifiedDevice.value = getConnection(deviceId)!!.apply { args = it }
                 }
+                return true
             }
-        // }
+        } catch (ex: Exception) {
+            Timber.e(ex, "Verification process failed.")
+        }
+
+        _verificationFailed.value = getConnection(deviceId)
+        return false
     }
 
     companion object {
         const val ENDPOINT_VERIFICATION = "/verifyDevice"
+        const val ENDPOINT_CLS = "/cls"
 
         private lateinit var instance: SessionManager
 

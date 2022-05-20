@@ -8,3 +8,9 @@ data class VerificationRequest(
 )
 
 data class VerificationResponse(@SerializedName("args") val args: Map<String, String>)
+
+enum class CloseErrorCodes(val code: String) {
+    VERIFICATION_FAILED("verificationFailed")
+}
+
+data class CloseResponse(@SerializedName("errorCode") val errorCode: CloseErrorCodes? = null)

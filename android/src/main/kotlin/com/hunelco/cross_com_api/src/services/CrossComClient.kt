@@ -81,7 +81,6 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
         data: String,
         result: Pigeon.Result<Long>
     ) {
-        Timber.d("VERIFIED DEVICE ${sessionManager.verifiedDevice.value}")
         val verifiedDeviceId = sessionManager.verifiedDevice.value?.id
             ?: return result.success(0)
         return sendMessage(verifiedDeviceId, endpoint, data, result)

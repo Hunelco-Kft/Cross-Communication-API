@@ -68,12 +68,12 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
 
     private val discoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
-            Timber.i("Nerby Endpoint discovered: $endpointId")
+            Timber.i("Nearby Endpoint discovered: $endpointId")
             sessionManager.onDeviceDiscovered(endpointId, info.endpointName)
         }
 
         override fun onEndpointLost(endpointId: String) {
-            Timber.i("Nerby Endpoint lost: $endpointId")
+            Timber.i("Nearby Endpoint lost: $endpointId")
             sessionManager.onDeviceLost(endpointId)
         }
     }
@@ -141,7 +141,6 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
     }
 
     suspend fun sendMessage(deviceId: String, data: String) {
-        Timber.i("DEVICE ID $deviceId")
         sessionManager.getCastedConnection<NearbyDevice>(deviceId) ?: return
 
         return suspendCoroutine { continuation ->

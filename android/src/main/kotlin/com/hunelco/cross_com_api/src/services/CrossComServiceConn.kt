@@ -23,6 +23,7 @@ class CrossComServiceConn(
     override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
         binding = service as? CommunicationAPI
         binding?.onSetup(config, binaryMessenger)
+
         result?.success(0)
     }
 

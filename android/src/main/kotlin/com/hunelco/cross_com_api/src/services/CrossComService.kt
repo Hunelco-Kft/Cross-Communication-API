@@ -16,6 +16,8 @@ import com.google.gson.Gson
 import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.ble.GattServerManager
 import com.hunelco.cross_com_api.src.managers.nearby.NearbyServerManager
+import com.hunelco.cross_com_api.src.models.CloseErrorCodes
+import com.hunelco.cross_com_api.src.models.CloseResponse
 import com.hunelco.cross_com_api.src.models.DataPayload
 import com.hunelco.cross_com_api.src.models.VerificationResponse
 import com.hunelco.cross_com_api.src.utils.AlreadyAdvertisingException
@@ -99,6 +101,16 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
                 )
             }
         }
+
+        sessionManager.verificationFailed.observeForever { unverifiedDevice ->
+            if (unverifiedDevice != null) {
+                val res = CloseResponse(CloseErrorCodes.VERIFICATION_FAILED)
+                val serializedResponse = gson.toJson(res, CloseResponse::class.java)
+                sendMessageToVerifiedDevice(
+                    SessionManager.ENDPOINT_CLS, serializedResponse, null
+                )
+            }
+        }
     }
 
     override fun onCreate() {
@@ -143,16 +155,16 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         gattManager?.open()
         coroutineScope.launch {
             try {
-                if (verificationCode != null)
-                    withContext(Dispatchers.Main) {
-                        sessionManager.verificationCode.value = verificationCode
-                    }
-
                 gattManager?.startAdvertise()
                 nearbyManager?.startAdvertise()
 
                 isAdvertising.set(true)
+
                 withContext(Dispatchers.Main) {
+                    if (verificationCode?.isNotEmpty() == true)
+                        sessionManager.verificationCode.value = verificationCode
+
+                    Timber.d("Server started, verification code: $verificationCode")
                     result?.success(0)
                 }
             } catch (ex: Exception) {
