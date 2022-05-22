@@ -9,15 +9,23 @@ import android.os.ParcelUuid
 import com.hunelco.cross_com_api.src.utils.NotificationUtils
 import timber.log.Timber
 import java.util.*
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 object BleAdvertiser {
-    class Callback(private val context: Context) : AdvertiseCallback() {
-        override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) =
+    class Callback(private val context: Context, var continuation: Continuation<Unit>?) :
+        AdvertiseCallback() {
+        override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
             Timber.i("LE Advertise started.")
+            continuation?.resume(Unit)
+        }
+
 
         override fun onStartFailure(errorCode: Int) {
-            Timber.i("LE Advertise failed: $errorCode")
             NotificationUtils.sendNotification(context, "LE Advertise failed: $errorCode")
+            Timber.i("LE Advertise failed: $errorCode")
+            continuation?.resumeWithException(IllegalStateException("LE Advertise couldn't start $errorCode"))
         }
     }
 

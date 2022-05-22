@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:cross_com_api/api.dart';
@@ -54,7 +53,6 @@ enum BroadcastType { none, server, client }
 
 abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, StateCallbackApi, DeviceVerificationCallbackApi {
   static const MethodChannel _channel = MethodChannel('cross_com_api', JSONMethodCodec());
-  static const String _verifyDeviceEndpoint = '/verifyDevice';
 
   static BroadcastType _broadcastType = BroadcastType.none;
   BroadcastType get broadcastType {
@@ -288,6 +286,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
     _scanStream.cancel();
     _connectedDevices.clear();
+    _scannedDevices.clear();
     BaseApi._broadcastType = BroadcastType.none;
   }
 
@@ -310,15 +309,14 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     }
   }
 
-  Future<void> startDiscovery({int timeoutInSeconds = 10000000}) async {
+  Future<void> startDiscovery({Duration duration = const Duration(minutes: 10)}) async {
     if (_isDiscovering) return;
 
     if (Platform.isAndroid) {
       await _discoveryApi.startDiscovery();
     } else {
       _scannedDevices.clear();
-      await _flutterBlue.startScan(
-          scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [_serviceUuid], timeout: Duration(seconds: timeoutInSeconds));
+      await _flutterBlue.startScan(scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [_serviceUuid], timeout: duration);
     }
     _isDiscovering = true;
   }

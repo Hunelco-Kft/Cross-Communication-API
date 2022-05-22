@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.*
+import com.hunelco.cross_com_api.src.managers.DeviceNotFoundException
 import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.nearby.profiles.GeneralNearbyProfile
 import com.hunelco.cross_com_api.src.models.NearbyDevice
@@ -141,7 +142,8 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
     }
 
     suspend fun sendMessage(deviceId: String, data: String) {
-        sessionManager.getCastedConnection<NearbyDevice>(deviceId) ?: return
+        sessionManager.getCastedConnection<NearbyDevice>(deviceId)
+            ?: throw DeviceNotFoundException(deviceId, Pigeon.Provider.nearby)
 
         return suspendCoroutine { continuation ->
             connectionsClient.sendPayload(deviceId, Payload.fromBytes(data.toByteArray()))

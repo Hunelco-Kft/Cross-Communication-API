@@ -3,16 +3,14 @@ package com.hunelco.cross_com_api.src.managers.ble
 import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+import android.companion.DeviceNotAssociatedException
 import android.content.Context
-import com.google.gson.Gson
+import com.hunelco.cross_com_api.src.managers.DeviceNotFoundException
 import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.ble.profiles.GeneralProfile
 import com.hunelco.cross_com_api.src.models.BleDevice
-import com.hunelco.cross_com_api.src.models.NearbyDevice
-import com.hunelco.cross_com_api.src.models.VerificationResponse
 import com.hunelco.cross_com_api.src.utils.MessageUtils
 import io.flutter.plugins.Pigeon
-import kotlinx.coroutines.coroutineScope
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.BleServerManager
 import no.nordicsemi.android.ble.ConnectionPriorityRequest
@@ -54,7 +52,7 @@ class GattServerManager private constructor(private val context: Context) :
     private val bluetoothAdapter = bluetoothManager.adapter
     private val bleAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser
 
-    private val bleAdvertiseCallback = BleAdvertiser.Callback(context)
+    private val bleAdvertiseCallback = BleAdvertiser.Callback(context, null)
 
     init {
         sessionManager.verifiedDevice.observeForever { verifiedDevice ->
@@ -94,22 +92,24 @@ class GattServerManager private constructor(private val context: Context) :
         if (!config!!.allowMultipleVerifiedDevice!! && sessionManager.hasVerifiedDevice())
             bleConn.device.disconnect().enqueue()
         else {
-            Timber.i("Device connected ${device.address} via GATT Server.")
             sessionManager.addConnection(bleConn, Pigeon.Provider.gatt)
+            Timber.i("Device connected ${device.address} via GATT Server.")
         }
     }
 
     override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {
-        Timber.i("Device disconnected ${device.address}")
-
         // The device has disconnected. Forget it and disconnect.
         val removedConn = sessionManager.removeCastedConnection<BleDevice>(device.address)
         removedConn?.device?.disconnect()?.enqueue()
+        Timber.i("Device disconnected ${device.address}")
     }
 
-    fun startAdvertise() {
-        bleAdvertiser.startAdvertising(reqAdvSettings, reqAdvData, bleAdvertiseCallback)
-        Timber.i("Start advertising - GattServerManager")
+    suspend fun startAdvertise() {
+        return suspendCoroutine { continuation ->
+            bleAdvertiseCallback.continuation = continuation
+            bleAdvertiser.startAdvertising(reqAdvSettings, reqAdvData, bleAdvertiseCallback)
+            Timber.i("Start advertising - GattServerManager")
+        }
     }
 
     fun stopAdvertise() {
@@ -118,7 +118,9 @@ class GattServerManager private constructor(private val context: Context) :
     }
 
     suspend fun sendMessage(deviceId: String, data: String) {
-        val device = sessionManager.getCastedConnection<BleDevice>(deviceId) ?: return
+        val device = sessionManager.getCastedConnection<BleDevice>(deviceId)
+            ?: throw DeviceNotFoundException(deviceId, Pigeon.Provider.gatt)
+
         device.device.sendMessage(MessageUtils.addEOF(data))
     }
 
@@ -132,7 +134,8 @@ class GattServerManager private constructor(private val context: Context) :
                     )
                 }
 
-            requestConnectionPriority(ConnectionPriorityRequest.CONNECTION_PRIORITY_HIGH)
+            requestConnectionPriority(ConnectionPriorityRequest.CONNECTION_PRIORITY_HIGH).enqueue()
+            requestMtu(517).enqueue()
         }
 
 
@@ -162,7 +165,7 @@ class GattServerManager private constructor(private val context: Context) :
         }
 
 
-        protected inner class GattCallback() : BleManager.BleManagerGattCallback() {
+        protected inner class GattCallback : BleManager.BleManagerGattCallback() {
 
             override fun isRequiredServiceSupported(gatt: BluetoothGatt) = true
 
