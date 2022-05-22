@@ -111,6 +111,9 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon
         }
     }
 
+    override fun processBleMessage(deviceId: String, msg: String) 
+        = crossComClient.processMessage(deviceId, msg) ?: Unit
+
     override fun stopServer() {
         binding?.activity?.let { activity ->
             activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

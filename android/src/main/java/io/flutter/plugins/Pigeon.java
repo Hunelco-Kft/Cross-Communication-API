@@ -450,6 +450,7 @@ public class Pigeon {
   /** Generated interface from Pigeon that represents a handler of messages from Flutter.*/
   public interface ClientApi {
     @NonNull void startClient(Config config);
+    @NonNull void processBleMessage(String deviceId, String msg);
 
     /** The codec used by ClientApi. */
     static MessageCodec<Object> getCodec() {
@@ -471,6 +472,34 @@ public class Pigeon {
                 throw new NullPointerException("configArg unexpectedly null.");
               }
               api.startClient(configArg);
+              wrapped.put("result", null);
+            }
+            catch (Error | RuntimeException exception) {
+              wrapped.put("error", wrapError(exception));
+            }
+            reply.reply(wrapped);
+          });
+        } else {
+          channel.setMessageHandler(null);
+        }
+      }
+      {
+        BasicMessageChannel<Object> channel =
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ClientApi.processBleMessage", getCodec());
+        if (api != null) {
+          channel.setMessageHandler((message, reply) -> {
+            Map<String, Object> wrapped = new HashMap<>();
+            try {
+              ArrayList<Object> args = (ArrayList<Object>)message;
+              String deviceIdArg = (String)args.get(0);
+              if (deviceIdArg == null) {
+                throw new NullPointerException("deviceIdArg unexpectedly null.");
+              }
+              String msgArg = (String)args.get(1);
+              if (msgArg == null) {
+                throw new NullPointerException("msgArg unexpectedly null.");
+              }
+              api.processBleMessage(deviceIdArg, msgArg);
               wrapped.put("result", null);
             }
             catch (Error | RuntimeException exception) {
