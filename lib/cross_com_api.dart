@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cross_com_api/api.dart';
+import 'package:cross_com_api/models/data_payload_model.dart';
+import 'package:cross_com_api/models/verification_request_model.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
@@ -66,12 +68,14 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   final _serviceUuid = Guid("00001111-0000-1000-8000-00805F9B34FB");
   final _characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
   final _eof = '<<<EOF>>>';
+  final _endpointVerifyDevice = '/verifyDevice';
 
   final _onDeviceStateStreamController = StreamController<DeviceStateEvent>.broadcast();
   Stream<DeviceStateEvent> get onDeviceStateStream {
     return _onDeviceStateStreamController.stream;
   }
 
+  ConnectedDevice? _verifiedDevice;
   Map<String, String> verifiedDeviceMeta = {};
 
   final Map<String, ConnectedDevice> _connectedDevices = {};
@@ -145,6 +149,10 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   @override
   void onDeviceDisconnected(ConnectedDevice device) {
     _connectedDevices.remove(device.deviceId!);
+    if (device.deviceId == _verifiedDevice?.deviceId) {
+      _verifiedDevice = null;
+    }
+
     _onDeviceStateStreamController.add(DeviceStateEvent(device: device, state: DeviceState.disconnected));
   }
 
@@ -171,6 +179,7 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   @override
   Map<String, String> onDeviceVerified(ConnectedDevice device, DeviceVerificationRequest request) {
     _onDeviceVerifiedStreamController.add(VerifiedDevice(device: device, request: request));
+    _verifiedDevice = device;
     return verifiedDeviceMeta;
   }
 }
@@ -321,17 +330,13 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
         // Read characteristics...
         String dataCollector = '';
 
-        print("NOTIFIED -- ${utf8.decode(event)}");
         while (true) {
           final chunk = await _bluetoothCharacteristic!.read();
-          print("DATA $chunk - ${chunk.length}");
-          if (chunk.isEmpty || dataCollector.endsWith(_eof)) break;
-
           dataCollector += utf8.decode(chunk);
-          print("DATA Coll $dataCollector");
+
+          if (chunk.isEmpty || dataCollector.endsWith(_eof)) break;
         }
 
-        print("DATA Colleced $dataCollector");
         await _api.processBleMessage(toDeviceId, dataCollector.replaceFirst(_eof, ''));
       });
 
@@ -388,15 +393,43 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   }
 
   @override
+  Future<void> sendMessage(String toDeviceId, String endpoint, String payload) async {
+    if (Platform.isAndroid) {
+      await _commApi.sendMessage(toDeviceId, endpoint, payload);
+    } else {
+      final device = _scannedDevices[toDeviceId]!;
+      final mtu = await device.mtu.first;
+
+      final dataPayload = DataPayload(endpoint, payload);
+      final serializedData = jsonEncode(dataPayload);
+      await _writeWithEof(serializedData, mtu);
+    }
+  }
+
+  @override
+  Future<void> sendMessageToVerifiedDevice(String endpoint, String data) async {
+    if (Platform.isAndroid) {
+      await _commApi.sendMessageToVerifiedDevice(endpoint, data);
+    } else {
+      if (_verifiedDevice == null) {
+        throw Exception("No verified device found.");
+      }
+      final device = (await _flutterBlue.connectedDevices).firstWhere((device) => device.id.id == _verifiedDevice!.deviceId);
+      await sendMessage(device.id.id, endpoint, data);
+    }
+  }
+
+  @override
   Future<Map<String?, String?>> requestDeviceVerification(String toDevice, String code, Map<String, String> args) async {
     if (Platform.isAndroid) {
       return super.requestDeviceVerification(toDevice, code, args);
     } else {
-      final request = DeviceVerificationRequest(verificationCode: code, args: args);
-      sendMessage(toDevice, '/verify', payload)
+      final verificationRequest = VerificationRequest(code, args);
+      final payload = DataPayload(_endpointVerifyDevice, jsonEncode(verificationRequest));
+      await sendMessage(toDevice, '/verify', jsonEncode(payload));
+      await Future.delayed(const Duration(milliseconds: 300), () => {});
+      return {};
     }
-   
-    return await _deviceVerificationApi.requestDeviceVerification(toDevice, request);
   }
 
   @override
@@ -407,5 +440,25 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   @override
   void onDeviceLost(String deviceId) {
     // Nothing todo here...
+  }
+
+  Future<void> _writeWithEof(String text, int mtu) async {
+    List<int> encodedList = utf8.encode('$text$_eof').toList(growable: true);
+    while (encodedList.isNotEmpty) {
+      List<int> subList = encodedList.getRange(0, encodedList.length > mtu ? mtu : encodedList.length).toList();
+      encodedList.removeRange(0, subList.length);
+      int successWriteCount = 0;
+      while (successWriteCount != 3) {
+        try {
+          await _bluetoothCharacteristic!.write(subList, withoutResponse: false);
+          break;
+        } catch (e, stack) {
+          successWriteCount++;
+        }
+      }
+      if (successWriteCount == 3) {
+        throw Exception("Couldn't write data ($text) to characteristic ($_bluetoothCharacteristic)");
+      }
+    }
   }
 }

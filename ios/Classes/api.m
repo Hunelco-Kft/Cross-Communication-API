@@ -337,6 +337,27 @@ void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTC
       [channel setMessageHandler:nil];
     }
   }
+  {
+    FlutterBasicMessageChannel *channel =
+      [FlutterBasicMessageChannel
+        messageChannelWithName:@"dev.flutter.pigeon.ClientApi.getMessage"
+        binaryMessenger:binaryMessenger
+        codec:FLTClientApiGetCodec()];
+    if (api) {
+      NSCAssert([api respondsToSelector:@selector(getMessageEndpoint:data:error:)], @"FLTClientApi api (%@) doesn't respond to @selector(getMessageEndpoint:data:error:)", api);
+      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
+        NSArray *args = message;
+        NSString *arg_endpoint = args[0];
+        NSString *arg_data = args[1];
+        FlutterError *error;
+        NSString *output = [api getMessageEndpoint:arg_endpoint data:arg_data error:&error];
+        callback(wrapResult(output, error));
+      }];
+    }
+    else {
+      [channel setMessageHandler:nil];
+    }
+  }
 }
 @interface FLTConnectionApiCodecReader : FlutterStandardReader
 @end

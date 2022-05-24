@@ -451,6 +451,7 @@ public class Pigeon {
   public interface ClientApi {
     @NonNull void startClient(Config config);
     @NonNull void processBleMessage(String deviceId, String msg);
+    @NonNull String getMessage(String endpoint, String data);
 
     /** The codec used by ClientApi. */
     static MessageCodec<Object> getCodec() {
@@ -501,6 +502,34 @@ public class Pigeon {
               }
               api.processBleMessage(deviceIdArg, msgArg);
               wrapped.put("result", null);
+            }
+            catch (Error | RuntimeException exception) {
+              wrapped.put("error", wrapError(exception));
+            }
+            reply.reply(wrapped);
+          });
+        } else {
+          channel.setMessageHandler(null);
+        }
+      }
+      {
+        BasicMessageChannel<Object> channel =
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ClientApi.getMessage", getCodec());
+        if (api != null) {
+          channel.setMessageHandler((message, reply) -> {
+            Map<String, Object> wrapped = new HashMap<>();
+            try {
+              ArrayList<Object> args = (ArrayList<Object>)message;
+              String endpointArg = (String)args.get(0);
+              if (endpointArg == null) {
+                throw new NullPointerException("endpointArg unexpectedly null.");
+              }
+              String dataArg = (String)args.get(1);
+              if (dataArg == null) {
+                throw new NullPointerException("dataArg unexpectedly null.");
+              }
+              String output = api.getMessage(endpointArg, dataArg);
+              wrapped.put("result", output);
             }
             catch (Error | RuntimeException exception) {
               wrapped.put("error", wrapError(exception));
