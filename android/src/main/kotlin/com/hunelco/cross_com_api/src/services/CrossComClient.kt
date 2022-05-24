@@ -76,6 +76,10 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
         }
     }
 
+    fun processMessage(deviceId: String, msg: String) =
+        sessionManager.onMessage(deviceId, Pigeon.Provider.gatt, msg)
+
+
     override fun sendMessageToVerifiedDevice(
         endpoint: String,
         data: String,

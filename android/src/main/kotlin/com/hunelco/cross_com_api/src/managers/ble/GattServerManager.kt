@@ -11,6 +11,10 @@ import com.hunelco.cross_com_api.src.managers.ble.profiles.GeneralProfile
 import com.hunelco.cross_com_api.src.models.BleDevice
 import com.hunelco.cross_com_api.src.utils.MessageUtils
 import io.flutter.plugins.Pigeon
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.BleServerManager
 import no.nordicsemi.android.ble.ConnectionPriorityRequest
@@ -54,6 +58,10 @@ class GattServerManager private constructor(private val context: Context) :
 
     private val bleAdvertiseCallback = BleAdvertiser.Callback(context, null)
 
+    //Coroutine Job and Coroutine Scope
+    private val coroutineJob = Job()
+    private val coroutineScope = CoroutineScope(Dispatchers.Main + coroutineJob)
+
     init {
         sessionManager.verifiedDevice.observeForever { verifiedDevice ->
             if (verifiedDevice != null && config!!.allowMultipleVerifiedDevice == false) {
@@ -63,7 +71,9 @@ class GattServerManager private constructor(private val context: Context) :
                         try {
                             Timber.i("Disconnecting connection (${connection.id}) because it is not verified...")
                             connection.device.disconnect()
-                            sessionManager.removeConnection(connection.id)
+                            coroutineScope.launch {
+                                sessionManager.removeConnection(connection.id)
+                            }
                         } catch (ex: Exception) {
                             Timber.e(ex, "Couldn't disconnect from device: ${connection.id}")
                         }
@@ -92,16 +102,20 @@ class GattServerManager private constructor(private val context: Context) :
         if (!config!!.allowMultipleVerifiedDevice!! && sessionManager.hasVerifiedDevice())
             bleConn.device.disconnect().enqueue()
         else {
-            sessionManager.addConnection(bleConn, Pigeon.Provider.gatt)
-            Timber.i("Device connected ${device.address} via GATT Server.")
+            coroutineScope.launch {
+                sessionManager.addConnection(bleConn, Pigeon.Provider.gatt)
+                Timber.i("Device connected ${device.address} via GATT Server.")
+            }
         }
     }
 
     override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {
         // The device has disconnected. Forget it and disconnect.
-        val removedConn = sessionManager.removeCastedConnection<BleDevice>(device.address)
-        removedConn?.device?.disconnect()?.enqueue()
-        Timber.i("Device disconnected ${device.address}")
+        coroutineScope.launch {
+            val removedConn = sessionManager.removeCastedConnection<BleDevice>(device.address)
+            removedConn?.device?.disconnect()?.enqueue()
+            Timber.i("Device disconnected ${device.address}")
+        }
     }
 
     suspend fun startAdvertise() {
@@ -129,13 +143,15 @@ class GattServerManager private constructor(private val context: Context) :
             setWriteCallback(generalGattCharacteristic)
                 .merge(LargeDataMerger(GeneralProfile.MAX_MSG_SIZE, this))
                 .with { device, data ->
-                    sessionManager.onMessage(
-                        device.address, Pigeon.Provider.gatt, data.getStringValue(0) ?: ""
-                    )
+                    coroutineScope.launch {
+                        sessionManager.onMessage(
+                            device.address, Pigeon.Provider.gatt, data.getStringValue(0) ?: ""
+                        )
+                    }
                 }
 
-            requestConnectionPriority(ConnectionPriorityRequest.CONNECTION_PRIORITY_HIGH).enqueue()
-            requestMtu(517).enqueue()
+            //requestConnectionPriority(ConnectionPriorityRequest.CONNECTION_PRIORITY_HIGH).enqueue()
+            //requestMtu(517).enqueue()
         }
 
 
@@ -146,11 +162,12 @@ class GattServerManager private constructor(private val context: Context) :
         suspend fun sendMessage(data: String) {
             return suspendCoroutine { continuation ->
                 beginAtomicRequestQueue().apply {
+                    add(sendIndication(generalGattCharacteristic, "R".toByteArray()))
                     add(
                         writeCharacteristic(
                             generalGattCharacteristic, data.toByteArray(),
                             WRITE_TYPE_DEFAULT
-                        ).split()
+                        )
                     )
                     done {
                         Timber.d("Data ($data) sent successfully to device: ${it.address}")

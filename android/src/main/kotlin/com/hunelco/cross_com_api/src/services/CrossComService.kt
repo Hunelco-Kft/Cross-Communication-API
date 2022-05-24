@@ -16,10 +16,7 @@ import com.google.gson.Gson
 import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.ble.GattServerManager
 import com.hunelco.cross_com_api.src.managers.nearby.NearbyServerManager
-import com.hunelco.cross_com_api.src.models.CloseErrorCodes
-import com.hunelco.cross_com_api.src.models.CloseResponse
-import com.hunelco.cross_com_api.src.models.DataPayload
-import com.hunelco.cross_com_api.src.models.VerificationResponse
+import com.hunelco.cross_com_api.src.models.*
 import com.hunelco.cross_com_api.src.utils.AlreadyAdvertisingException
 import com.hunelco.cross_com_api.src.utils.MessageUtils
 import com.hunelco.cross_com_api.src.utils.NotificationUtils
@@ -211,10 +208,15 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
 
         coroutineScope.launch {
             try {
-                gattManager?.sendMessage(id, serializedPayload)
-                nearbyManager?.sendMessage(id, serializedPayload)
+                if (sessionManager.getCastedConnection<BleDevice>(id) != null)
+                    gattManager?.sendMessage(id, serializedPayload)
+
+                if (sessionManager.getCastedConnection<NearbyDevice>(id) != null)
+                    nearbyManager?.sendMessage(id, serializedPayload)
+
                 result?.success(0)
             } catch (ex: Exception) {
+                Timber.e(ex, "Couldn't send message properly")
                 result?.error(ex)
             }
         }
