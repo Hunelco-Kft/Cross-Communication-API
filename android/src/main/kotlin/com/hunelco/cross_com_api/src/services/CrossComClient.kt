@@ -135,6 +135,9 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
 
     fun stopClient() = client.stopClient()
 
+    fun processMessage(deviceId: String, msg: String) =
+        sessionManager.onMessage(deviceId, Pigeon.Provider.gatt, msg)
+
     inner class MessageObserver : Observer<Pigeon.DataMessage> {
         var response: Map<String, String>? = null
         var exception: Exception? = null

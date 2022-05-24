@@ -1,9 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:cross_com_api/api.dart';
+import 'package:cross_com_api/models/data_payload_model.dart';
+import 'package:cross_com_api/models/verification_request_model.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
+enum DeviceStatus { none, connecting, connected, disconnected }
 
 class DeviceInfo {
   String id;
@@ -60,14 +65,17 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   }
 
   final FlutterBluePlus _flutterBlue = FlutterBluePlus.instance;
-  final _characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
   final _serviceUuid = Guid("00001111-0000-1000-8000-00805F9B34FB");
+  final _characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
+  final _eof = '<<<EOF>>>';
+  final _endpointVerifyDevice = '/verifyDevice';
 
   final _onDeviceStateStreamController = StreamController<DeviceStateEvent>.broadcast();
   Stream<DeviceStateEvent> get onDeviceStateStream {
     return _onDeviceStateStreamController.stream;
   }
 
+  ConnectedDevice? _verifiedDevice;
   Map<String, String> verifiedDeviceMeta = {};
 
   final Map<String, ConnectedDevice> _connectedDevices = {};
@@ -141,6 +149,10 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   @override
   void onDeviceDisconnected(ConnectedDevice device) {
     _connectedDevices.remove(device.deviceId!);
+    if (device.deviceId == _verifiedDevice?.deviceId) {
+      _verifiedDevice = null;
+    }
+
     _onDeviceStateStreamController.add(DeviceStateEvent(device: device, state: DeviceState.disconnected));
   }
 
@@ -167,6 +179,7 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   @override
   Map<String, String> onDeviceVerified(ConnectedDevice device, DeviceVerificationRequest request) {
     _onDeviceVerifiedStreamController.add(VerifiedDevice(device: device, request: request));
+    _verifiedDevice = device;
     return verifiedDeviceMeta;
   }
 }
@@ -255,8 +268,11 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   final ClientApi _api = ClientApi(binaryMessenger: BaseApi._channel.binaryMessenger);
   final DiscoveryApi _discoveryApi = DiscoveryApi(binaryMessenger: BaseApi._channel.binaryMessenger);
 
-  late StreamSubscription<List<ScanResult>> _scanStream;
+  StreamSubscription<List<ScanResult>>? _scanStream;
   final Map<String, BluetoothDevice> _scannedDevices = {};
+  BluetoothService? _bluetoothService;
+  BluetoothCharacteristic? _bluetoothCharacteristic;
+  StreamSubscription<List<int>>? _characeristicStream;
 
   Future<void> startClient(
       {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) async {
@@ -264,38 +280,67 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       throw Exception("The client is in a bad state ${BaseApi._broadcastType}");
     }
 
-    final config = Config(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
+    if (Platform.isAndroid) {
+      final config = Config(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
+      await _api.startClient(config);
+    }
 
-    _scanStream = _flutterBlue.scanResults.listen((scanResult) {
-      for (ScanResult r in scanResult) {
-        _scannedDevices[r.device.id.id] = r.device;
-        _onDeviceDiscoveredStreamController.add(DeviceInfo(id: r.device.id.id, name: r.device.name));
-      }
-    });
-
-    await _api.startClient(config);
     BaseApi._broadcastType = BroadcastType.client;
   }
 
-  void stopClient() {
+  Future<void> stopClient() async {
     if (BaseApi._broadcastType != BroadcastType.client) {
       throw Exception("The client is in a bad state ${BaseApi._broadcastType}");
     }
 
-    stopDiscovery();
+    await stopDiscovery();
 
-    _scanStream.cancel();
+    await _characeristicStream?.cancel();
+
+    _scanStream?.cancel();
     _connectedDevices.clear();
-    _scannedDevices.clear();
+
+    _bluetoothService = null;
+    _bluetoothCharacteristic = null;
+
     BaseApi._broadcastType = BroadcastType.none;
   }
 
   @override
-  Future<void> connect(String toDeviceId, String displayName) {
+  Future<void> connect(String toDeviceId, String displayName) async {
     if (Platform.isAndroid) {
       return super.connect(toDeviceId, displayName);
     } else {
-      return _scannedDevices[toDeviceId]!.connect(timeout: const Duration(seconds: 10));
+      if (await _flutterBlue.isScanning.first) {
+        await _flutterBlue.stopScan();
+      }
+
+      final device = _scannedDevices[toDeviceId];
+
+      await device!.connect(timeout: const Duration(seconds: 10));
+      List<BluetoothService> services = await device.discoverServices();
+      _bluetoothService = services.firstWhere((service) => service.uuid.toString() == _serviceUuid.toString());
+      _bluetoothCharacteristic = _bluetoothService!.characteristics
+          .firstWhere((characteristicUuid) => characteristicUuid.uuid.toString() == _characteristicUuid.toString());
+
+      _bluetoothCharacteristic!.setNotifyValue(true);
+
+      await _characeristicStream?.cancel();
+      _characeristicStream = _bluetoothCharacteristic!.value.listen((event) async {
+        // Read characteristics...
+        String dataCollector = '';
+
+        while (true) {
+          final chunk = await _bluetoothCharacteristic!.read();
+          dataCollector += utf8.decode(chunk);
+
+          if (chunk.isEmpty || dataCollector.endsWith(_eof)) break;
+        }
+
+        await _api.processBleMessage(toDeviceId, dataCollector.replaceFirst(_eof, ''));
+      });
+
+      onDeviceConnected(ConnectedDevice(deviceId: toDeviceId, provider: Provider.gatt));
     }
   }
 
@@ -305,7 +350,9 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       return super.disconnect(toDeviceId);
     } else {
       final connectedDevice = (await _flutterBlue.connectedDevices).firstWhere((element) => element.id.id == toDeviceId);
-      return connectedDevice.disconnect();
+      await _characeristicStream?.cancel();
+      await connectedDevice.disconnect();
+      onDeviceDisconnected(ConnectedDevice(deviceId: toDeviceId, provider: Provider.gatt));
     }
   }
 
@@ -316,7 +363,18 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       await _discoveryApi.startDiscovery();
     } else {
       _scannedDevices.clear();
-      await _flutterBlue.startScan(scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [_serviceUuid], timeout: duration);
+      if (await _flutterBlue.isScanning.first) {
+        await _flutterBlue.stopScan();
+      }
+
+      _scanStream?.cancel();
+      _scanStream = _flutterBlue.scanResults.listen((scanResult) {
+        for (ScanResult r in scanResult) {
+          _scannedDevices[r.device.id.id] = r.device;
+          _onDeviceDiscoveredStreamController.add(DeviceInfo(id: r.device.id.id, name: r.device.name));
+        }
+      });
+      _flutterBlue.startScan(scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [_serviceUuid], timeout: duration);
     }
     _isDiscovering = true;
   }
@@ -335,6 +393,46 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   }
 
   @override
+  Future<void> sendMessage(String toDeviceId, String endpoint, String payload) async {
+    if (Platform.isAndroid) {
+      await _commApi.sendMessage(toDeviceId, endpoint, payload);
+    } else {
+      final device = _scannedDevices[toDeviceId]!;
+      final mtu = await device.mtu.first;
+
+      final dataPayload = DataPayload(endpoint, payload);
+      final serializedData = jsonEncode(dataPayload);
+      await _writeWithEof(serializedData, mtu);
+    }
+  }
+
+  @override
+  Future<void> sendMessageToVerifiedDevice(String endpoint, String data) async {
+    if (Platform.isAndroid) {
+      await _commApi.sendMessageToVerifiedDevice(endpoint, data);
+    } else {
+      if (_verifiedDevice == null) {
+        throw Exception("No verified device found.");
+      }
+      final device = (await _flutterBlue.connectedDevices).firstWhere((device) => device.id.id == _verifiedDevice!.deviceId);
+      await sendMessage(device.id.id, endpoint, data);
+    }
+  }
+
+  @override
+  Future<Map<String?, String?>> requestDeviceVerification(String toDevice, String code, Map<String, String> args) async {
+    if (Platform.isAndroid) {
+      return super.requestDeviceVerification(toDevice, code, args);
+    } else {
+      final verificationRequest = VerificationRequest(code, args);
+      final payload = DataPayload(_endpointVerifyDevice, jsonEncode(verificationRequest));
+      await sendMessage(toDevice, '/verify', jsonEncode(payload));
+      await Future.delayed(const Duration(milliseconds: 300), () => {});
+      return {};
+    }
+  }
+
+  @override
   void onDeviceDiscovered(String deviceId, String deviceName) {
     _onDeviceDiscoveredStreamController.add(DeviceInfo(id: deviceId, name: deviceName));
   }
@@ -342,5 +440,25 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   @override
   void onDeviceLost(String deviceId) {
     // Nothing todo here...
+  }
+
+  Future<void> _writeWithEof(String text, int mtu) async {
+    List<int> encodedList = utf8.encode('$text$_eof').toList(growable: true);
+    while (encodedList.isNotEmpty) {
+      List<int> subList = encodedList.getRange(0, encodedList.length > mtu ? mtu : encodedList.length).toList();
+      encodedList.removeRange(0, subList.length);
+      int successWriteCount = 0;
+      while (successWriteCount != 3) {
+        try {
+          await _bluetoothCharacteristic!.write(subList, withoutResponse: false);
+          break;
+        } catch (e, stack) {
+          successWriteCount++;
+        }
+      }
+      if (successWriteCount == 3) {
+        throw Exception("Couldn't write data ($text) to characteristic ($_bluetoothCharacteristic)");
+      }
+    }
   }
 }

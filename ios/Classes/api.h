@@ -90,6 +90,8 @@ NSObject<FlutterMessageCodec> *FLTClientApiGetCodec(void);
 - (void)startClientConfig:(FLTConfig *)config error:(FlutterError *_Nullable *_Nonnull)error;
 /// @return `nil` only when `error != nil`.
 - (void)processBleMessageDeviceId:(NSString *)deviceId msg:(NSString *)msg error:(FlutterError *_Nullable *_Nonnull)error;
+/// @return `nil` only when `error != nil`.
+- (nullable NSString *)getMessageEndpoint:(NSString *)endpoint data:(NSString *)data error:(FlutterError *_Nullable *_Nonnull)error;
 @end
 
 extern void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTClientApi> *_Nullable api);
