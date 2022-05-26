@@ -27,9 +27,10 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
 
     protected val connectionCallback = object : ConnectionLifecycleCallback() {
         override fun onConnectionInitiated(endpointId: String, connectionInfo: ConnectionInfo) {
-            if (!config.allowMultipleVerifiedDevice!! && sessionManager.hasVerifiedDevice())
+            if (!config.allowMultipleVerifiedDevice!! && sessionManager.hasVerifiedDevice()) {
+                Timber.i("Device connection rejeceted ${connectionInfo.endpointName} via Nearby Server.")
                 connectionsClient.rejectConnection(endpointId)
-            else {
+            } else {
                 Timber.d("Device connecting ${connectionInfo.endpointName} via Nearby Server.")
                 internalDevices.add(NearbyDevice(endpointId, connectionInfo))
                 connectionsClient.acceptConnection(endpointId, payloadCallback)
@@ -37,6 +38,7 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
         }
 
         override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
+            Timber.i("Device (${endpointId}) - ${result.status.isSuccess} - ${result.status.statusCode}.")
             if (result.status.isSuccess) {
                 val device = internalDevices.find { it.id == endpointId } ?: return
                 sessionManager.addConnection(device, Pigeon.Provider.nearby)
@@ -58,7 +60,6 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
             val data = String(payload.asBytes() ?: byteArrayOf())
             Timber.d("Data received from $endpointId. Data: $data")
-
             sessionManager.onMessage(endpointId, Pigeon.Provider.nearby, data)
         }
 

@@ -120,12 +120,12 @@ class SessionManager private constructor() {
                 setEndpoint(dataPayload.endpoint)
             }.build()
 
+            _msgLiveData.value = dataMsg
             if (dataPayload.endpoint == ENDPOINT_VERIFICATION) {
                 verifyDevice(deviceId, provider, dataPayload)
                 return
             }
 
-            _msgLiveData.value = dataMsg
             communicationCallback?.onMessageReceived(dataMsg) {}
         } catch (ex: Exception) {
             Timber.w(ex, "Couldn't serialize message. Msg: $data")
@@ -135,9 +135,7 @@ class SessionManager private constructor() {
 
     fun onDeviceDiscovered(deviceId: String, deviceName: String) {
         Timber.i("Nerby Endpoint discovered -> SessionManager: $deviceId ${discoveryCallbackApi == null}")
-        discoveryCallbackApi!!.onDeviceDiscovered(deviceId, deviceName) {
-            Timber.i("Nearby - CSUMPA")
-        }
+        discoveryCallbackApi!!.onDeviceDiscovered(deviceId, deviceName) { }
     }
 
     fun onDeviceLost(deviceId: String) {
@@ -159,9 +157,8 @@ class SessionManager private constructor() {
                     .setArgs(request.args)
                     .build()
 
-                verificationCallbackApi?.onDeviceVerified(verifiedConnection, devRequest) {
-                    _verifiedDevice.value = getConnection(deviceId)!!.apply { args = it }
-                }
+                _verifiedDevice.value = getConnection(deviceId)
+                verificationCallbackApi?.onDeviceVerified(verifiedConnection, devRequest) {}
                 return true
             }
         } catch (ex: Exception) {

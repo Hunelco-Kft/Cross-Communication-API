@@ -80,7 +80,7 @@ abstract class DeviceVerificationApi {
 
 @FlutterApi()
 abstract class DeviceVerificationCallbackApi {
-  Map<String, String> onDeviceVerified(ConnectedDevice device, DeviceVerificationRequest request);
+  void onDeviceVerified(ConnectedDevice device, DeviceVerificationRequest request);
 }
 
 @HostApi()

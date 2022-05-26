@@ -90,8 +90,6 @@ NSObject<FlutterMessageCodec> *FLTClientApiGetCodec(void);
 - (void)startClientConfig:(FLTConfig *)config error:(FlutterError *_Nullable *_Nonnull)error;
 /// @return `nil` only when `error != nil`.
 - (void)processBleMessageDeviceId:(NSString *)deviceId msg:(NSString *)msg error:(FlutterError *_Nullable *_Nonnull)error;
-/// @return `nil` only when `error != nil`.
-- (nullable NSString *)getMessageEndpoint:(NSString *)endpoint data:(NSString *)data error:(FlutterError *_Nullable *_Nonnull)error;
 @end
 
 extern void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTClientApi> *_Nullable api);
@@ -131,7 +129,7 @@ NSObject<FlutterMessageCodec> *FLTDeviceVerificationCallbackApiGetCodec(void);
 
 @interface FLTDeviceVerificationCallbackApi : NSObject
 - (instancetype)initWithBinaryMessenger:(id<FlutterBinaryMessenger>)binaryMessenger;
-- (void)onDeviceVerifiedDevice:(FLTConnectedDevice *)device request:(FLTDeviceVerificationRequest *)request completion:(void(^)(NSDictionary<NSString *, NSString *> *_Nullable, NSError *_Nullable))completion;
+- (void)onDeviceVerifiedDevice:(FLTConnectedDevice *)device request:(FLTDeviceVerificationRequest *)request completion:(void(^)(NSError *_Nullable))completion;
 @end
 /// The codec used by FLTDiscoveryApi.
 NSObject<FlutterMessageCodec> *FLTDiscoveryApiGetCodec(void);

@@ -2,14 +2,12 @@ package com.hunelco.cross_com_api
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import android.view.WindowManager
 import com.hunelco.cross_com_api.src.services.CrossComClient
 import com.hunelco.cross_com_api.src.services.CrossComService
 import com.hunelco.cross_com_api.src.services.CrossComServiceConn
 import com.hunelco.cross_com_api.src.utils.NotificationUtils
 import com.hunelco.cross_com_api.src.utils.PermissionHelper
-import io.flutter.BuildConfig
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -107,12 +105,12 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon
 
         if (crossComClient == null) {
             crossComClient = CrossComClient(activity, config)
-            crossComClient!!.updateBinaryMessenger(binaryMessenger!!)
         }
+        crossComClient!!.updateBinaryMessenger(binaryMessenger!!)
     }
 
     override fun processBleMessage(deviceId: String, msg: String) 
-        = crossComClient.processMessage(deviceId, msg) ?: Unit
+        = crossComClient?.processMessage(deviceId, msg) ?: Unit
 
     override fun stopServer() {
         binding?.activity?.let { activity ->

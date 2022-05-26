@@ -107,6 +107,7 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
             withContext(Dispatchers.Main) {
                 sessionManager.msgLiveData.observeForever(observer)
             }
+
             try {
                 client.sendMessage(deviceId, serializedPayload)
                 withTimeout(3000) { observer.wait() }
@@ -123,20 +124,13 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
     }
 
     fun updateBinaryMessenger(messenger: BinaryMessenger) {
-        coroutineScope.launch {
-            withContext(Dispatchers.Main) {
-                client.updateBinaryMessenger(messenger)
-                Pigeon.DiscoveryApi.setup(messenger, this@CrossComClient)
-                Pigeon.CommunicationApi.setup(messenger, this@CrossComClient)
-                Pigeon.DeviceVerificationApi.setup(messenger, this@CrossComClient)
-            }
-        }
+        client.updateBinaryMessenger(messenger)
+        Pigeon.DiscoveryApi.setup(messenger, this@CrossComClient)
+        Pigeon.CommunicationApi.setup(messenger, this@CrossComClient)
+        Pigeon.DeviceVerificationApi.setup(messenger, this@CrossComClient)
     }
 
     fun stopClient() = client.stopClient()
-
-    fun processMessage(deviceId: String, msg: String) =
-        sessionManager.onMessage(deviceId, Pigeon.Provider.gatt, msg)
 
     inner class MessageObserver : Observer<Pigeon.DataMessage> {
         var response: Map<String, String>? = null

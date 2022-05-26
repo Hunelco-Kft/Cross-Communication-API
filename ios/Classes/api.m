@@ -337,27 +337,6 @@ void FLTClientApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTC
       [channel setMessageHandler:nil];
     }
   }
-  {
-    FlutterBasicMessageChannel *channel =
-      [FlutterBasicMessageChannel
-        messageChannelWithName:@"dev.flutter.pigeon.ClientApi.getMessage"
-        binaryMessenger:binaryMessenger
-        codec:FLTClientApiGetCodec()];
-    if (api) {
-      NSCAssert([api respondsToSelector:@selector(getMessageEndpoint:data:error:)], @"FLTClientApi api (%@) doesn't respond to @selector(getMessageEndpoint:data:error:)", api);
-      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        NSArray *args = message;
-        NSString *arg_endpoint = args[0];
-        NSString *arg_data = args[1];
-        FlutterError *error;
-        NSString *output = [api getMessageEndpoint:arg_endpoint data:arg_data error:&error];
-        callback(wrapResult(output, error));
-      }];
-    }
-    else {
-      [channel setMessageHandler:nil];
-    }
-  }
 }
 @interface FLTConnectionApiCodecReader : FlutterStandardReader
 @end
@@ -691,15 +670,14 @@ NSObject<FlutterMessageCodec> *FLTDeviceVerificationCallbackApiGetCodec() {
   }
   return self;
 }
-- (void)onDeviceVerifiedDevice:(FLTConnectedDevice *)arg_device request:(FLTDeviceVerificationRequest *)arg_request completion:(void(^)(NSDictionary<NSString *, NSString *> *_Nullable, NSError *_Nullable))completion {
+- (void)onDeviceVerifiedDevice:(FLTConnectedDevice *)arg_device request:(FLTDeviceVerificationRequest *)arg_request completion:(void(^)(NSError *_Nullable))completion {
   FlutterBasicMessageChannel *channel =
     [FlutterBasicMessageChannel
       messageChannelWithName:@"dev.flutter.pigeon.DeviceVerificationCallbackApi.onDeviceVerified"
       binaryMessenger:self.binaryMessenger
       codec:FLTDeviceVerificationCallbackApiGetCodec()];
   [channel sendMessage:@[arg_device, arg_request] reply:^(id reply) {
-    NSDictionary<NSString *, NSString *> *output = reply;
-    completion(output, nil);
+    completion(nil);
   }];
 }
 @end

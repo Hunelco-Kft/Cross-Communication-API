@@ -13,6 +13,8 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import com.google.gson.Gson
+import com.hunelco.cross_com_api.src.managers.DeviceNotFoundException
+import com.hunelco.cross_com_api.src.managers.NoVerifiedDeviceFoundException
 import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.ble.GattServerManager
 import com.hunelco.cross_com_api.src.managers.nearby.NearbyServerManager
@@ -229,7 +231,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
     ) {
         Timber.d("VERIFIED DEVICE ${sessionManager.verifiedDevice.value}")
         val verifiedDeviceId = sessionManager.verifiedDevice.value?.id
-            ?: return result?.success(0) ?: Unit
+            ?: return result?.error(NoVerifiedDeviceFoundException()) ?: Unit
         return sendMessage(verifiedDeviceId, endpoint, data, result)
     }
 
@@ -237,7 +239,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
      * Functionality available to clients
      */
     private inner class DataPlane : Binder(), CommunicationAPI {
-        override fun onSetup(config: Pigeon.Config, binaryMessenger: BinaryMessenger) {
+        override fun onSetup(config: Pigeon.Config, binaryMessenger: BinaryMessenger, result: Pigeon.Result<Long>?) {
             gattManager!!.config = config
             nearbyManager!!.config = config
 
@@ -248,6 +250,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
 
                     Pigeon.CommunicationApi.setup(binaryMessenger, this@CrossComService)
                     Pigeon.AdvertiseApi.setup(binaryMessenger, this@CrossComService)
+                    result?.success(0)
                 }
             }
         }

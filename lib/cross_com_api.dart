@@ -76,7 +76,6 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   }
 
   ConnectedDevice? _verifiedDevice;
-  Map<String, String> verifiedDeviceMeta = {};
 
   final Map<String, ConnectedDevice> _connectedDevices = {};
   Map<String, ConnectedDevice> get connectedDevices {
@@ -177,10 +176,8 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   }
 
   @override
-  Map<String, String> onDeviceVerified(ConnectedDevice device, DeviceVerificationRequest request) {
+  void onDeviceVerified(ConnectedDevice device, DeviceVerificationRequest request) {
     _onDeviceVerifiedStreamController.add(VerifiedDevice(device: device, request: request));
-    _verifiedDevice = device;
-    return verifiedDeviceMeta;
   }
 }
 
@@ -320,8 +317,8 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       await device!.connect(timeout: const Duration(seconds: 10));
       List<BluetoothService> services = await device.discoverServices();
       _bluetoothService = services.firstWhere((service) => service.uuid.toString() == _serviceUuid.toString());
-      _bluetoothCharacteristic = _bluetoothService!.characteristics
-          .firstWhere((characteristicUuid) => characteristicUuid.uuid.toString() == _characteristicUuid.toString());
+      _bluetoothCharacteristic =
+          _bluetoothService!.characteristics.firstWhere((characteristicUuid) => characteristicUuid.uuid.toString() == _characteristicUuid.toString());
 
       _bluetoothCharacteristic!.setNotifyValue(true);
 
