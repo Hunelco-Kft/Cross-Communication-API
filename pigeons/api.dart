@@ -52,8 +52,6 @@ abstract class ServerApi {
 @HostApi()
 abstract class ClientApi {
   void startClient(Config config);
-
-  void processBleMessage(String deviceId, String msg);
 }
 
 @HostApi()
