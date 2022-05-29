@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:cross_com_api/api.dart';
 import 'package:cross_com_api/models/data_payload_model.dart';
-import 'package:cross_com_api/models/verification_request_model.dart';
+import 'package:cross_com_api/models/verification_body.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
@@ -66,7 +66,10 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
 
   final FlutterBluePlus _flutterBlue = FlutterBluePlus.instance;
   final _serviceUuid = Guid("00001111-0000-1000-8000-00805F9B34FB");
-  final _characteristicUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
+
+  final _notifCharUuid = Guid("00002222-0000-1000-8000-00805F9B34FA");
+  final _readCharUuid = Guid("00002222-0000-1000-8000-00805F9B34FB");
+  final _writeCharUuid = Guid("00002222-0000-1000-8000-00805F9B34FC");
   final _eof = '<<<EOF>>>';
   final _endpointVerifyDevice = '/verifyDevice';
 
@@ -267,8 +270,6 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
   StreamSubscription<List<ScanResult>>? _scanStream;
   final Map<String, BluetoothDevice> _scannedDevices = {};
-  BluetoothService? _bluetoothService;
-  BluetoothCharacteristic? _bluetoothCharacteristic;
   StreamSubscription<List<int>>? _characeristicStream;
 
   Future<void> startClient(
@@ -297,9 +298,6 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     _scanStream?.cancel();
     _connectedDevices.clear();
 
-    _bluetoothService = null;
-    _bluetoothCharacteristic = null;
-
     BaseApi._broadcastType = BroadcastType.none;
   }
 
@@ -314,27 +312,30 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
       final device = _scannedDevices[toDeviceId];
 
-      await device!.connect(timeout: const Duration(seconds: 10));
-      List<BluetoothService> services = await device.discoverServices();
-      _bluetoothService = services.firstWhere((service) => service.uuid.toString() == _serviceUuid.toString());
-      _bluetoothCharacteristic =
-          _bluetoothService!.characteristics.firstWhere((characteristicUuid) => characteristicUuid.uuid.toString() == _characteristicUuid.toString());
+      await device!.connect(autoConnect: false, timeout: const Duration(seconds: 10));
+      await device.discoverServices();
 
-      _bluetoothCharacteristic!.setNotifyValue(true);
+      final _notifChar = await _getCharacteristic(_notifCharUuid, toDeviceId);
+      print("OKKK");
+      await _notifChar.setNotifyValue(true);
 
+      print("OKKK 2");
       await _characeristicStream?.cancel();
-      _characeristicStream = _bluetoothCharacteristic!.value.listen((event) async {
+      _characeristicStream = _notifChar.value.listen((event) async {
         // Read characteristics...
         String dataCollector = '';
 
+        final characteristic = await _getCharacteristic(_readCharUuid, toDeviceId);
         while (true) {
-          final chunk = await _bluetoothCharacteristic!.read();
+          final chunk = await characteristic.read();
           dataCollector += utf8.decode(chunk);
 
-          if (chunk.isEmpty || dataCollector.endsWith(_eof)) break;
+          print("OKKK 3 - $dataCollector");
+          if (dataCollector.endsWith(_eof)) {
+            _processMessage(device.id.id, dataCollector.replaceAll(_eof, ''));
+            break;
+          }
         }
-
-        await _api.processBleMessage(toDeviceId, dataCollector.replaceFirst(_eof, ''));
       });
 
       onDeviceConnected(ConnectedDevice(deviceId: toDeviceId, provider: Provider.gatt));
@@ -396,10 +397,8 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     } else {
       final device = _scannedDevices[toDeviceId]!;
       final mtu = await device.mtu.first;
-
-      final dataPayload = DataPayload(endpoint, payload);
-      final serializedData = jsonEncode(dataPayload);
-      await _writeWithEof(serializedData, mtu);
+      final request = jsonEncode(DataPayloadModel(endpoint: endpoint, data: payload).toJson());
+      await _writeWithEof(request, mtu, toDeviceId);
     }
   }
 
@@ -421,10 +420,9 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     if (Platform.isAndroid) {
       return super.requestDeviceVerification(toDevice, code, args);
     } else {
-      final verificationRequest = VerificationRequest(code, args);
-      final payload = DataPayload(_endpointVerifyDevice, jsonEncode(verificationRequest));
-      await sendMessage(toDevice, '/verify', jsonEncode(payload));
-      await Future.delayed(const Duration(milliseconds: 300), () => {});
+      final verificationRequest = VerificationBody(code: code, args: args);
+      final msg = jsonEncode(verificationRequest.toJson());
+      await sendMessage(toDevice, _endpointVerifyDevice, msg);
       return {};
     }
   }
@@ -439,7 +437,9 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     // Nothing todo here...
   }
 
-  Future<void> _writeWithEof(String text, int mtu) async {
+  Future<void> _writeWithEof(String text, int mtu, String toDeviceId) async {
+    final writeChar = await _getCharacteristic(_writeCharUuid, toDeviceId);
+
     List<int> encodedList = utf8.encode('$text$_eof').toList(growable: true);
     while (encodedList.isNotEmpty) {
       List<int> subList = encodedList.getRange(0, encodedList.length > mtu ? mtu : encodedList.length).toList();
@@ -447,15 +447,39 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       int successWriteCount = 0;
       while (successWriteCount != 3) {
         try {
-          await _bluetoothCharacteristic!.write(subList, withoutResponse: false);
+          await writeChar.write(subList, withoutResponse: false);
           break;
         } catch (e, stack) {
           successWriteCount++;
         }
       }
       if (successWriteCount == 3) {
-        throw Exception("Couldn't write data ($text) to characteristic ($_bluetoothCharacteristic)");
+        throw Exception("Couldn't write data ($text) to characteristic ($writeChar)");
       }
+    }
+  }
+
+  Future<BluetoothCharacteristic> _getCharacteristic(Guid char, String deviceId) async {
+    final device = _scannedDevices[deviceId]!;
+
+    final _bluetoothService = (await device.services.first).firstWhere((service) => service.uuid.toString() == _serviceUuid.toString());
+    return _bluetoothService.characteristics.firstWhere((characteristicUuid) => characteristicUuid.uuid.toString() == char.toString());
+  }
+
+  void _processMessage(String deviceId, String msg) {
+    try {
+      final dataPayload = DataPayloadModel.fromJson(jsonDecode(msg));
+      final dataMsg = DataMessage(deviceId: deviceId, provider: Provider.gatt, endpoint: dataPayload.endpoint, data: dataPayload.data);
+
+      if (dataMsg.endpoint == _endpointVerifyDevice) {
+        _verifiedDevice = ConnectedDevice(deviceId: deviceId, provider: Provider.gatt);
+        // TODO: onDeviceVerififed()
+      } else {
+        onMessageReceived(dataMsg);
+      }
+    } catch (ex) {
+      // Couldn't parse message...
+      onRawMessageReceived(deviceId, msg);
     }
   }
 }
