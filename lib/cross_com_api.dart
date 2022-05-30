@@ -316,10 +316,8 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       await device.discoverServices();
 
       final _notifChar = await _getCharacteristic(_notifCharUuid, toDeviceId);
-      print("OKKK");
       await _notifChar.setNotifyValue(true);
 
-      print("OKKK 2");
       await _characeristicStream?.cancel();
       _characeristicStream = _notifChar.value.listen((event) async {
         // Read characteristics...
@@ -330,7 +328,6 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
           final chunk = await characteristic.read();
           dataCollector += utf8.decode(chunk);
 
-          print("OKKK 3 - $dataCollector");
           if (dataCollector.endsWith(_eof)) {
             _processMessage(device.id.id, dataCollector.replaceAll(_eof, ''));
             break;
