@@ -53,13 +53,13 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:5.0.1'
 
     // Nearby
-    api 'com.google.android.gms:play-services-nearby:18.1.0'
+    api 'com.google.android.gms:play-services-nearby:18.2.0'
 
     // Location Services
     implementation 'com.google.android.gms:play-services-location:19.0.1'
 
     // Gson
-    implementation 'com.google.code.gson:gson:2.8.6'
+    implementation 'com.google.code.gson:gson:2.8.9'
 
     // Nordic Semiconductor BLE
     implementation 'no.nordicsemi.android:ble-ktx:2.4.0'

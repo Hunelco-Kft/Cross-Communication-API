@@ -3,7 +3,6 @@ package com.hunelco.cross_com_api.src.managers.ble
 import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-import android.companion.DeviceNotAssociatedException
 import android.content.Context
 import com.hunelco.cross_com_api.src.managers.DeviceNotFoundException
 import com.hunelco.cross_com_api.src.managers.SessionManager
@@ -18,6 +17,7 @@ import kotlinx.coroutines.launch
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.BleServerManager
 import no.nordicsemi.android.ble.ConnectionPriorityRequest
+import no.nordicsemi.android.ble.MtuRequest
 import no.nordicsemi.android.ble.observer.ServerObserver
 import timber.log.Timber
 import kotlin.coroutines.resume
@@ -34,16 +34,30 @@ class GattServerManager private constructor(private val context: Context) :
 
     private val sessionManager = SessionManager.getInstance()
 
-    private val generalGattCharacteristic = characteristic(
-        GeneralProfile.CHARACTERISTIC,
-        BluetoothGattCharacteristic.PROPERTY_READ or
-                BluetoothGattCharacteristic.PROPERTY_WRITE or
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY or
+    private val notifCharacteristic = characteristic(
+        GeneralProfile.NOTIF_CHARACTERISTIC,
+        BluetoothGattCharacteristic.PROPERTY_NOTIFY or
                 BluetoothGattCharacteristic.PROPERTY_INDICATE,
-        BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE,
-        description("General communication characteristic.", false)
+        BluetoothGattCharacteristic.PERMISSION_READ,
+        description("Notifications", false)
     )
-    private val generalGattService = service(GeneralProfile.SERVICE, generalGattCharacteristic)
+
+    private val readCharacteristic = characteristic(
+        GeneralProfile.READ_CHARACTERISTIC,
+        BluetoothGattCharacteristic.PROPERTY_READ,
+        BluetoothGattCharacteristic.PERMISSION_READ,
+        description("Reads", false)
+    )
+    private val writeCharacteristic = characteristic(
+        GeneralProfile.WRITE_CHARACTERISTIC,
+        BluetoothGattCharacteristic.PROPERTY_WRITE,
+        BluetoothGattCharacteristic.PERMISSION_WRITE,
+        description("Writes", false)
+    )
+    private val generalGattService = service(
+        GeneralProfile.SERVICE, notifCharacteristic,
+        readCharacteristic, writeCharacteristic
+    )
 
     private val gattServices = mutableListOf(generalGattService)
 
@@ -70,10 +84,9 @@ class GattServerManager private constructor(private val context: Context) :
                     if (connection.id != verifiedDevice.id) {
                         try {
                             Timber.i("Disconnecting connection (${connection.id}) because it is not verified...")
-                            connection.device.disconnect()
-                            coroutineScope.launch {
-                                sessionManager.removeConnection(connection.id)
-                            }
+                            connection.device.disconnect().enqueue()
+
+                            coroutineScope.launch { sessionManager.removeConnection(connection.id) }
                         } catch (ex: Exception) {
                             Timber.e(ex, "Couldn't disconnect from device: ${connection.id}")
                         }
@@ -95,13 +108,16 @@ class GattServerManager private constructor(private val context: Context) :
     override fun onServerReady() = Timber.i("Gatt server ready.")
 
     override fun onDeviceConnectedToServer(device: BluetoothDevice) {
-        val bleConn = BleDevice(
-            device.address,
-            ServerConnection().apply { useServer(this@GattServerManager) })
+        val conn = ServerConnection().apply {
+            useServer(this@GattServerManager)
+        }
+        val bleConn = BleDevice(device.address, conn)
 
-        if (!config!!.allowMultipleVerifiedDevice!! && sessionManager.hasVerifiedDevice())
+        if (!config!!.allowMultipleVerifiedDevice!! && sessionManager.hasVerifiedDevice()) {
+            Timber.i("Device (${device.name}) not allowed to connect.")
             bleConn.device.disconnect().enqueue()
-        else {
+        } else {
+            conn.connect(device).enqueue()
             coroutineScope.launch {
                 sessionManager.addConnection(bleConn, Pigeon.Provider.gatt)
                 Timber.i("Device connected ${device.address} via GATT Server.")
@@ -112,6 +128,7 @@ class GattServerManager private constructor(private val context: Context) :
     override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {
         // The device has disconnected. Forget it and disconnect.
         coroutineScope.launch {
+            Timber
             val removedConn = sessionManager.removeCastedConnection<BleDevice>(device.address)
             removedConn?.device?.disconnect()?.enqueue()
             Timber.i("Device disconnected ${device.address}")
@@ -140,7 +157,7 @@ class GattServerManager private constructor(private val context: Context) :
 
     inner class ServerConnection : BleManager(context) {
         init {
-            setWriteCallback(generalGattCharacteristic)
+            setWriteCallback(writeCharacteristic)
                 .merge(LargeDataMerger(GeneralProfile.MAX_MSG_SIZE, this))
                 .with { device, data ->
                     coroutineScope.launch {
@@ -150,10 +167,8 @@ class GattServerManager private constructor(private val context: Context) :
                     }
                 }
 
-            //requestConnectionPriority(ConnectionPriorityRequest.CONNECTION_PRIORITY_HIGH).enqueue()
-            //requestMtu(517).enqueue()
+            requestConnectionPriority(ConnectionPriorityRequest.CONNECTION_PRIORITY_HIGH).enqueue()
         }
-
 
         override fun getGattCallback() = GattCallback()
 
@@ -162,25 +177,21 @@ class GattServerManager private constructor(private val context: Context) :
         suspend fun sendMessage(data: String) {
             return suspendCoroutine { continuation ->
                 beginAtomicRequestQueue().apply {
-                    add(sendIndication(generalGattCharacteristic, "R".toByteArray()))
-                    add(
-                        writeCharacteristic(
-                            generalGattCharacteristic, data.toByteArray(),
-                            WRITE_TYPE_DEFAULT
-                        )
-                    )
+                    add(sendIndication(notifCharacteristic, "".toByteArray()))
+                    add(waitForRead(readCharacteristic, data.toByteArray()).split())
                     done {
+                        Timber.i("SEND MESSAGE - OKKKK 2")
                         Timber.d("Data ($data) sent successfully to device: ${it.address}")
                         continuation.resume(Unit)
                     }
                     fail { device, _ ->
+                        Timber.i("SEND MESSAGE - NOKKKK 2")
                         Timber.e("Data ($data) sent failed to device ${device.address}")
                         continuation.resumeWithException(Exception("Data ($data) sent failed to device ${device.address}"))
                     }
-                }
+                }.enqueue()
             }
         }
-
 
         protected inner class GattCallback : BleManager.BleManagerGattCallback() {
 

@@ -33,9 +33,8 @@ class SessionManager private constructor() {
     val verificationFailed: LiveData<ConnectedDevice<*>?>
         get() = _verificationFailed
 
-    fun setVerifiedDevice(deviceId: String) {
-        val connectedDevice = getConnection(deviceId) ?: return
-        _verifiedDevice.value = connectedDevice
+    fun setVerifiedDevice(deviceId: String?) {
+        _verifiedDevice.value = getConnection(deviceId ?: "")
     }
 
     private val _msgLiveData = MutableLiveData<Pigeon.DataMessage>()
@@ -65,6 +64,7 @@ class SessionManager private constructor() {
     }
 
     fun removeConnection(id: String): ConnectedDevice<*>? {
+        Timber.i("REMOVE CONN - ${_verifiedDevice.value?.id} - $id")
         if (_verifiedDevice.value?.id == id) _verifiedDevice.value = null
 
         val conn = _connections.remove(id)
