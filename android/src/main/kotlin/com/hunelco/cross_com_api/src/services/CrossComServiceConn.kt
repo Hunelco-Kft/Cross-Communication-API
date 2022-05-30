@@ -5,7 +5,6 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugins.Pigeon
-import timber.log.Timber
 
 interface CommunicationAPI {
     fun onSetup(
@@ -25,6 +24,7 @@ class CrossComServiceConn(
     override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
         binding = service as? CommunicationAPI
         binding?.onSetup(config, binaryMessenger, result)
+
     }
 
     override fun onServiceDisconnected(p0: ComponentName?) {

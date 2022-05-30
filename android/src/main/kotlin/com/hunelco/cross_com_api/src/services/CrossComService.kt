@@ -151,6 +151,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
             return
         }
 
+        sessionManager.setVerifiedDevice(null)
         gattManager?.open()
         coroutineScope.launch {
             try {
@@ -242,6 +243,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         override fun onSetup(config: Pigeon.Config, binaryMessenger: BinaryMessenger, result: Pigeon.Result<Long>?) {
             gattManager!!.config = config
             nearbyManager!!.config = config
+            sessionManager.setVerifiedDevice(null)
 
             coroutineScope.launch {
                 withContext(Dispatchers.Main) {

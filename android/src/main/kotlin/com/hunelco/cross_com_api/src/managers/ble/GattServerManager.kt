@@ -128,6 +128,7 @@ class GattServerManager private constructor(private val context: Context) :
     override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {
         // The device has disconnected. Forget it and disconnect.
         coroutineScope.launch {
+            Timber
             val removedConn = sessionManager.removeCastedConnection<BleDevice>(device.address)
             removedConn?.device?.disconnect()?.enqueue()
             Timber.i("Device disconnected ${device.address}")
@@ -174,7 +175,6 @@ class GattServerManager private constructor(private val context: Context) :
         override fun log(priority: Int, message: String) = Timber.log(priority, message)
 
         suspend fun sendMessage(data: String) {
-            Timber.i("SEND MESSAGE - OKKKK $data")
             return suspendCoroutine { continuation ->
                 beginAtomicRequestQueue().apply {
                     add(sendIndication(notifCharacteristic, "".toByteArray()))
