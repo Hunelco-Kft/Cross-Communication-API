@@ -9,7 +9,7 @@ import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.nearby.profiles.GeneralNearbyProfile
 import com.hunelco.cross_com_api.src.models.NearbyDevice
 import io.flutter.plugin.common.BinaryMessenger
-import io.flutter.plugins.Pigeon
+import com.flutter.pigeon.Pigeon
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume

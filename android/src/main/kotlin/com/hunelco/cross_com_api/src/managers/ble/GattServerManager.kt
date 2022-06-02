@@ -9,7 +9,7 @@ import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.ble.profiles.GeneralProfile
 import com.hunelco.cross_com_api.src.models.BleDevice
 import com.hunelco.cross_com_api.src.utils.MessageUtils
-import io.flutter.plugins.Pigeon
+import com.flutter.pigeon.Pigeon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

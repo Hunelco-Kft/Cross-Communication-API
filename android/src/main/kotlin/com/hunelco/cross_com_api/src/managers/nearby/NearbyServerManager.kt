@@ -5,7 +5,7 @@ import android.content.Context
 import com.google.android.gms.nearby.connection.AdvertisingOptions
 import com.hunelco.cross_com_api.src.managers.nearby.profiles.GeneralNearbyProfile
 import com.hunelco.cross_com_api.src.models.NearbyDevice
-import io.flutter.plugins.Pigeon
+import com.flutter.pigeon.Pigeon
 import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException

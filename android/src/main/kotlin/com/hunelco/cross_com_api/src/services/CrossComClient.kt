@@ -9,7 +9,7 @@ import com.hunelco.cross_com_api.src.models.DataPayload
 import com.hunelco.cross_com_api.src.models.VerificationRequest
 import com.hunelco.cross_com_api.src.models.VerificationResponse
 import io.flutter.plugin.common.BinaryMessenger
-import io.flutter.plugins.Pigeon
+import com.flutter.pigeon.Pigeon
 import kotlinx.coroutines.*
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean

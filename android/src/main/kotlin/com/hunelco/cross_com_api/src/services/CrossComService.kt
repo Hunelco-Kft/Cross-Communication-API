@@ -23,7 +23,7 @@ import com.hunelco.cross_com_api.src.utils.AlreadyAdvertisingException
 import com.hunelco.cross_com_api.src.utils.MessageUtils
 import com.hunelco.cross_com_api.src.utils.NotificationUtils
 import io.flutter.plugin.common.BinaryMessenger
-import io.flutter.plugins.Pigeon
+import com.flutter.pigeon.Pigeon
 import kotlinx.coroutines.*
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
@@ -48,7 +48,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
                 when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)) {
                     BluetoothAdapter.STATE_ON -> {
                         response.setState(Pigeon.State.on)
-                        startAdvertise(null, null)
+                        startAdvertise("", null)
                     }
                     BluetoothAdapter.STATE_OFF -> {
                         stopAdvertise(null)
@@ -75,7 +75,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
             hasP2PCapability = connected
             val response = Pigeon.StateResponse.Builder()
             if (connected) {
-                startAdvertise(null, null)
+                startAdvertise("", null)
                 response.setState(Pigeon.State.on)
             } else {
                 stopAdvertise(null)
@@ -145,7 +145,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         super.onDestroy()
     }
 
-    override fun startAdvertise(verificationCode: String?, result: Pigeon.Result<Long>?) {
+    override fun startAdvertise(verificationCode: String, result: Pigeon.Result<Long>?) {
         if (isAdvertising.get()) {
             result?.error(AlreadyAdvertisingException())
             return
@@ -161,7 +161,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
                 isAdvertising.set(true)
 
                 withContext(Dispatchers.Main) {
-                    if (verificationCode?.isNotEmpty() == true)
+                    if (verificationCode.isNotEmpty())
                         sessionManager.verificationCode.value = verificationCode
 
                     Timber.d("Server started, verification code: $verificationCode")
