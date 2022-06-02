@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:cross_com_api/api.dart';
 import 'package:cross_com_api/models/data_payload_model.dart';
 import 'package:cross_com_api/models/verification_body.dart';
+import 'package:cross_com_api/utils/device_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
@@ -278,7 +279,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       throw Exception("The client is in a bad state ${BaseApi._broadcastType}");
     }
 
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && await DeviceHelper().isSdkVersionUnder31()) {
       final config = Config(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
       await _api.startClient(config);
     }
@@ -303,7 +304,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
   @override
   Future<void> connect(String toDeviceId, String displayName) async {
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && await DeviceHelper().isSdkVersionUnder31()) {
       return super.connect(toDeviceId, displayName);
     } else {
       if (await _flutterBlue.isScanning.first) {
@@ -341,7 +342,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
   @override
   Future<void> disconnect(String toDeviceId) async {
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && await DeviceHelper().isSdkVersionUnder31()) {
       return super.disconnect(toDeviceId);
     } else {
       final connectedDevice = (await _flutterBlue.connectedDevices).firstWhere((element) => element.id.id == toDeviceId);
@@ -354,7 +355,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   Future<void> startDiscovery({Duration duration = const Duration(minutes: 10)}) async {
     if (_isDiscovering) return;
 
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && await DeviceHelper().isSdkVersionUnder31()) {
       await _discoveryApi.startDiscovery();
     } else {
       _scannedDevices.clear();
@@ -377,7 +378,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   Future<void> stopDiscovery() async {
     if (!_isDiscovering) return;
 
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && await DeviceHelper().isSdkVersionUnder31()) {
       await _discoveryApi.stopDiscovery();
     } else {
       await _flutterBlue.stopScan();
@@ -389,7 +390,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
   @override
   Future<void> sendMessage(String toDeviceId, String endpoint, String payload) async {
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && await DeviceHelper().isSdkVersionUnder31()) {
       await _commApi.sendMessage(toDeviceId, endpoint, payload);
     } else {
       final device = _scannedDevices[toDeviceId]!;
@@ -401,7 +402,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
   @override
   Future<void> sendMessageToVerifiedDevice(String endpoint, String data) async {
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && await DeviceHelper().isSdkVersionUnder31()) {
       await _commApi.sendMessageToVerifiedDevice(endpoint, data);
     } else {
       if (_verifiedDevice == null) {
@@ -414,7 +415,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
   @override
   Future<Map<String?, String?>> requestDeviceVerification(String toDevice, String code, Map<String, String> args) async {
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && await DeviceHelper().isSdkVersionUnder31()) {
       return super.requestDeviceVerification(toDevice, code, args);
     } else {
       final verificationRequest = VerificationBody(code: code, args: args);
