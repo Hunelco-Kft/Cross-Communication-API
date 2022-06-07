@@ -12,7 +12,7 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.BinaryMessenger
-import io.flutter.plugins.Pigeon
+import com.flutter.pigeon.Pigeon
 import timber.log.Timber
 import kotlin.system.exitProcess
 

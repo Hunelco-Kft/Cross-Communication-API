@@ -8,7 +8,7 @@ import com.hunelco.cross_com_api.src.models.ConnectedDevice
 import com.hunelco.cross_com_api.src.models.DataPayload
 import com.hunelco.cross_com_api.src.models.VerificationRequest
 import io.flutter.plugin.common.BinaryMessenger
-import io.flutter.plugins.Pigeon
+import com.flutter.pigeon.Pigeon
 import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine

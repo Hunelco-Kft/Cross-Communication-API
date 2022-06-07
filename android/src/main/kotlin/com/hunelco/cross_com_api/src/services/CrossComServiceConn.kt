@@ -4,7 +4,7 @@ import android.content.ComponentName
 import android.content.ServiceConnection
 import android.os.IBinder
 import io.flutter.plugin.common.BinaryMessenger
-import io.flutter.plugins.Pigeon
+import com.flutter.pigeon.Pigeon
 
 interface CommunicationAPI {
     fun onSetup(
