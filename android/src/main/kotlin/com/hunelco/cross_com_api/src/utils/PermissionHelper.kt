@@ -88,8 +88,6 @@ class PermissionHelper(private val activity: Activity, val fileTransferEnabled: 
 
     private fun getRequiredPermissions(): Array<String> {
         return mutableListOf<String>().apply {
-            add(Manifest.permission.BLUETOOTH)
-            add(Manifest.permission.BLUETOOTH_ADMIN)
             add(Manifest.permission.ACCESS_WIFI_STATE)
             add(Manifest.permission.CHANGE_WIFI_STATE)
             add(Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -102,6 +100,10 @@ class PermissionHelper(private val activity: Activity, val fileTransferEnabled: 
                 add(Manifest.permission.BLUETOOTH_ADVERTISE)
                 add(Manifest.permission.BLUETOOTH_SCAN)
                 add(Manifest.permission.BLUETOOTH_CONNECT)
+                add(Manifest.permission.BLUETOOTH)
+            } else {
+                add(Manifest.permission.BLUETOOTH)
+                add(Manifest.permission.BLUETOOTH_ADMIN)
             }
         }.toTypedArray()
     }
