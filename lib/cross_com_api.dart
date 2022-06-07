@@ -342,7 +342,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
             final chunk = await characteristic.read();
             dataCollector += utf8.decode(chunk);
 
-            if (dataCollector.endsWith(_eof)) {
+            if (chunk.isEmpty || dataCollector.endsWith(_eof)) {
               _mode = BleMode.none;
               _processMessage(device.id.id, dataCollector.replaceAll(_eof, ''));
               break;
