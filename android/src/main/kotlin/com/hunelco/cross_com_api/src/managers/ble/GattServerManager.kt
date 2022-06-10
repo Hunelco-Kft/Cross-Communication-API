@@ -177,7 +177,7 @@ class GattServerManager private constructor(private val context: Context) :
         suspend fun sendMessage(data: String) {
             return suspendCoroutine { continuation ->
                 beginAtomicRequestQueue().apply {
-                    add(sendIndication(notifCharacteristic, "".toByteArray()))
+                    add(sendIndication(notifCharacteristic, "R".toByteArray()))
                     add(waitForRead(readCharacteristic, data.toByteArray()).split())
                     done {
                         Timber.i("SEND MESSAGE - OKKKK 2")

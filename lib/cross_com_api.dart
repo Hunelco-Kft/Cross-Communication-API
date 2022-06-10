@@ -11,8 +11,6 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 enum DeviceStatus { none, connecting, connected, disconnected }
 
-enum BleMode { none, read, write }
-
 class DeviceInfo {
   String id;
 
@@ -268,8 +266,6 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     return _onDeviceDiscoveredStreamController.stream;
   }
 
-  BleMode _mode = BleMode.none;
-
   final ClientApi _api = ClientApi(binaryMessenger: BaseApi._channel.binaryMessenger);
   final DiscoveryApi _discoveryApi = DiscoveryApi(binaryMessenger: BaseApi._channel.binaryMessenger);
 
@@ -324,34 +320,25 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       await _notifChar.setNotifyValue(true);
 
       await _characeristicStream?.cancel();
-      _characeristicStream = _notifChar.value.listen((event) async {
-        // Read characteristics...
-        String dataCollector = '';
+      _characeristicStream = _notifChar.value.listen((List<int> event) async {
+        if (event.isNotEmpty && utf8.decode(event) == 'R') {
+          // Read characteristics...
+          String dataCollector = '';
 
-        // Wait till any other BleMode turn back...
-        while (true) {
-          if (_mode == BleMode.none) break;
-          await Future.delayed(const Duration(milliseconds: 20));
-        }
+          try {
+            final characteristic = await _getCharacteristic(_readCharUuid, toDeviceId);
+            while (true) {
+              final chunk = await characteristic.read();
+              dataCollector += utf8.decode(chunk);
 
-        try {
-          _mode = BleMode.read;
-
-          final characteristic = await _getCharacteristic(_readCharUuid, toDeviceId);
-          while (true) {
-            final chunk = await characteristic.read();
-            dataCollector += utf8.decode(chunk);
-
-            if (chunk.isEmpty || dataCollector.endsWith(_eof)) {
-              _mode = BleMode.none;
-              _processMessage(device.id.id, dataCollector.replaceAll(_eof, ''));
-              break;
+              if (chunk.isEmpty || dataCollector.endsWith(_eof)) {
+                _processMessage(device.id.id, dataCollector.replaceAll(_eof, ''));
+                break;
+              }
             }
+          } catch (ex) {
+            // TODO
           }
-        } catch (ex) {
-          // TODO
-        } finally {
-          _mode = BleMode.none;
         }
       });
 
@@ -455,36 +442,25 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   }
 
   Future<void> _writeWithEof(String text, int mtu, String toDeviceId) async {
-    while (true) {
-      if (_mode == BleMode.none) break;
-      await Future.delayed(const Duration(milliseconds: 20));
-    }
+    final writeChar = await _getCharacteristic(_writeCharUuid, toDeviceId);
 
-    try {
-      _mode = BleMode.write;
-      final writeChar = await _getCharacteristic(_writeCharUuid, toDeviceId);
-
-      List<int> encodedList = utf8.encode('$text$_eof').toList(growable: true);
-      while (encodedList.isNotEmpty) {
-        List<int> subList = encodedList.getRange(0, encodedList.length > mtu ? mtu : encodedList.length).toList();
-        encodedList.removeRange(0, subList.length);
-        int successWriteCount = 0;
-        while (successWriteCount != 3) {
-          try {
-            await writeChar.write(subList, withoutResponse: false);
-            break;
-          } catch (e, stack) {
-            successWriteCount++;
-          }
+    List<int> encodedList = utf8.encode('$text$_eof').toList(growable: true);
+    while (encodedList.isNotEmpty) {
+      List<int> subList = encodedList.getRange(0, encodedList.length > mtu ? mtu : encodedList.length).toList();
+      encodedList.removeRange(0, subList.length);
+      int successWriteCount = 0;
+      while (successWriteCount != 3) {
+        try {
+          await writeChar.write(subList, withoutResponse: false);
+          break;
+        } catch (e, stack) {
+          print('write error: $e\n$stack');
         }
+        successWriteCount++;
         if (successWriteCount == 3) {
           throw Exception("Couldn't write data ($text) to characteristic ($writeChar)");
         }
       }
-    } catch (ex) {
-      // TODO
-    } finally {
-      _mode = BleMode.none;
     }
   }
 
