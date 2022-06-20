@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:cross_com_api/api.dart';
@@ -315,7 +316,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
       final device = _scannedDevices[toDeviceId];
 
-      await device!.connect(autoConnect: false, timeout: const Duration(seconds: 10));
+      await device!.connect(autoConnect: false).timeout(const Duration(seconds: 10));
 
       StreamSubscription<int>? _mtuSub;
       if (Platform.isAndroid) {
@@ -387,15 +388,23 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       await _discoveryApi.startDiscovery();
     } else {
       _scannedDevices.clear();
-      if (await _flutterBlue.isScanning.first) {
-        await _flutterBlue.stopScan();
-      }
+      await _flutterBlue.stopScan();
 
-      _scanStream?.cancel();
+      await _scanStream?.cancel();
+
+      // A flutterBlue.scanResults egy BehaviorSubject(feliratkozás pillanatában már megkapjuk azt az állapotot amiről legutoljára tud) így amint elkezdjük hallgatni a streamet mindig megkapjuk a legutolsó állapotot.
+      // A flutter.startScan ezt üríti, de mivel a stream async így mindenféleképpen megkapjuk a legutolsó állapotot és csak utána az ürítettet.
+      // Az új feliratkozók mindig megkapják legelsőnek a kezdetleges/legutolsó állapotot és csak utána kapják az események
+      bool ignoreFirst = true;
       _scanStream = _flutterBlue.scanResults.listen((scanResult) {
-        for (ScanResult r in scanResult) {
-          _scannedDevices[r.device.id.id] = r.device;
-          _onDeviceDiscoveredStreamController.add(DeviceInfo(id: r.device.id.id, name: r.device.name));
+        log('result: $scanResult');
+        if (!ignoreFirst) {
+          for (ScanResult r in scanResult) {
+            _scannedDevices[r.device.id.id] = r.device;
+            _onDeviceDiscoveredStreamController.add(DeviceInfo(id: r.device.id.id, name: r.device.name));
+          }
+        } else {
+          ignoreFirst = false;
         }
       });
       _flutterBlue.startScan(scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [_serviceUuid], timeout: duration);
