@@ -228,9 +228,9 @@ class ServerApi {
     }
   }
 
-  Future<void> stopServer() async {
+  Future<void> stopServerSync() async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-        'dev.flutter.pigeon.ServerApi.stopServer', codec, binaryMessenger: _binaryMessenger);
+        'dev.flutter.pigeon.ServerApi.stopServerSync', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
         await channel.send(null) as Map<Object?, Object?>?;
     if (replyMap == null) {
@@ -598,9 +598,9 @@ class DiscoveryApi {
 
   static const MessageCodec<Object?> codec = _DiscoveryApiCodec();
 
-  Future<int> startDiscovery() async {
+  Future<int> startDiscoveryAsync() async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-        'dev.flutter.pigeon.DiscoveryApi.startDiscovery', codec, binaryMessenger: _binaryMessenger);
+        'dev.flutter.pigeon.DiscoveryApi.startDiscoveryAsync', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
         await channel.send(null) as Map<Object?, Object?>?;
     if (replyMap == null) {
@@ -625,9 +625,9 @@ class DiscoveryApi {
     }
   }
 
-  Future<int> stopDiscovery() async {
+  Future<int> stopDiscoveryAsync() async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-        'dev.flutter.pigeon.DiscoveryApi.stopDiscovery', codec, binaryMessenger: _binaryMessenger);
+        'dev.flutter.pigeon.DiscoveryApi.stopDiscoveryAsync', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
         await channel.send(null) as Map<Object?, Object?>?;
     if (replyMap == null) {
@@ -767,9 +767,9 @@ class AdvertiseApi {
     }
   }
 
-  Future<int> reset() async {
+  Future<int> resetAsync() async {
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-        'dev.flutter.pigeon.AdvertiseApi.reset', codec, binaryMessenger: _binaryMessenger);
+        'dev.flutter.pigeon.AdvertiseApi.resetAsync', codec, binaryMessenger: _binaryMessenger);
     final Map<Object?, Object?>? replyMap =
         await channel.send(null) as Map<Object?, Object?>?;
     if (replyMap == null) {

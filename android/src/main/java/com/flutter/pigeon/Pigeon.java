@@ -357,7 +357,7 @@ public class Pigeon {
   /** Generated interface from Pigeon that represents a handler of messages from Flutter.*/
   public interface ServerApi {
     void startServer(@NonNull Config config, Result<Long> result);
-    void stopServer();
+    void stopServerSync();
 
     /** The codec used by ServerApi. */
     static MessageCodec<Object> getCodec() {
@@ -402,12 +402,12 @@ public class Pigeon {
       }
       {
         BasicMessageChannel<Object> channel =
-            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ServerApi.stopServer", getCodec());
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.ServerApi.stopServerSync", getCodec());
         if (api != null) {
           channel.setMessageHandler((message, reply) -> {
             Map<String, Object> wrapped = new HashMap<>();
             try {
-              api.stopServer();
+              api.stopServerSync();
               wrapped.put("result", null);
             }
             catch (Error | RuntimeException exception) {
@@ -788,8 +788,8 @@ public class Pigeon {
 
   /** Generated interface from Pigeon that represents a handler of messages from Flutter.*/
   public interface DiscoveryApi {
-    void startDiscovery(Result<Long> result);
-    void stopDiscovery(Result<Long> result);
+    void startDiscoveryAsync(Result<Long> result);
+    void stopDiscoveryAsync(Result<Long> result);
 
     /** The codec used by DiscoveryApi. */
     static MessageCodec<Object> getCodec() {
@@ -800,7 +800,7 @@ public class Pigeon {
     static void setup(BinaryMessenger binaryMessenger, DiscoveryApi api) {
       {
         BasicMessageChannel<Object> channel =
-            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.DiscoveryApi.startDiscovery", getCodec());
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.DiscoveryApi.startDiscoveryAsync", getCodec());
         if (api != null) {
           channel.setMessageHandler((message, reply) -> {
             Map<String, Object> wrapped = new HashMap<>();
@@ -816,7 +816,7 @@ public class Pigeon {
                 }
               };
 
-              api.startDiscovery(resultCallback);
+              api.startDiscoveryAsync(resultCallback);
             }
             catch (Error | RuntimeException exception) {
               wrapped.put("error", wrapError(exception));
@@ -829,7 +829,7 @@ public class Pigeon {
       }
       {
         BasicMessageChannel<Object> channel =
-            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.DiscoveryApi.stopDiscovery", getCodec());
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.DiscoveryApi.stopDiscoveryAsync", getCodec());
         if (api != null) {
           channel.setMessageHandler((message, reply) -> {
             Map<String, Object> wrapped = new HashMap<>();
@@ -845,7 +845,7 @@ public class Pigeon {
                 }
               };
 
-              api.stopDiscovery(resultCallback);
+              api.stopDiscoveryAsync(resultCallback);
             }
             catch (Error | RuntimeException exception) {
               wrapped.put("error", wrapError(exception));
@@ -900,7 +900,7 @@ public class Pigeon {
   public interface AdvertiseApi {
     void startAdvertise(@NonNull String verificationCode, Result<Long> result);
     void stopAdvertise(Result<Long> result);
-    void reset(Result<Long> result);
+    void resetAsync(Result<Long> result);
 
     /** The codec used by AdvertiseApi. */
     static MessageCodec<Object> getCodec() {
@@ -974,7 +974,7 @@ public class Pigeon {
       }
       {
         BasicMessageChannel<Object> channel =
-            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.AdvertiseApi.reset", getCodec());
+            new BasicMessageChannel<>(binaryMessenger, "dev.flutter.pigeon.AdvertiseApi.resetAsync", getCodec());
         if (api != null) {
           channel.setMessageHandler((message, reply) -> {
             Map<String, Object> wrapped = new HashMap<>();
@@ -990,7 +990,7 @@ public class Pigeon {
                 }
               };
 
-              api.reset(resultCallback);
+              api.resetAsync(resultCallback);
             }
             catch (Error | RuntimeException exception) {
               wrapped.put("error", wrapError(exception));

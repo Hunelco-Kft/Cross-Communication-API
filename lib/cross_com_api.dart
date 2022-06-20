@@ -222,14 +222,14 @@ class CrossComServerApi extends BaseApi {
     }
 
     await stopAdvertise();
-    await _api.stopServer();
+    await _api.stopServerSync();
 
     _connectedDevices.clear();
     BaseApi._broadcastType = BroadcastType.none;
   }
 
   Future<void> reset() {
-    return _advertiseApi.reset();
+    return _advertiseApi.resetAsync();
   }
 
   Future<void> startAdvertise(String verificationCode) async {
@@ -385,7 +385,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     if (_isDiscovering) return;
 
     if (Platform.isAndroid && await DeviceHelper().isSdkVersionUnder31()) {
-      await _discoveryApi.startDiscovery();
+      await _discoveryApi.startDiscoveryAsync();
     } else {
       _scannedDevices.clear();
       await _flutterBlue.stopScan();
@@ -416,7 +416,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     if (!_isDiscovering) return;
 
     if (Platform.isAndroid && await DeviceHelper().isSdkVersionUnder31()) {
-      await _discoveryApi.stopDiscovery();
+      await _discoveryApi.stopDiscoveryAsync();
     } else {
       await _flutterBlue.stopScan();
       _scannedDevices.clear();
