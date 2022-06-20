@@ -249,6 +249,8 @@ class CrossComServerApi extends BaseApi {
 class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   static final CrossComClientApi _instance = CrossComClientApi._internal();
 
+  int? mtuSize;
+
   factory CrossComClientApi() {
     DiscoveryCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
     return _instance;
@@ -314,36 +316,55 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       final device = _scannedDevices[toDeviceId];
 
       await device!.connect(autoConnect: false, timeout: const Duration(seconds: 10));
-      await device.discoverServices();
 
-      final _notifChar = await _getCharacteristic(_notifCharUuid, toDeviceId);
-      await _notifChar.setNotifyValue(true);
-
-      await _characeristicStream?.cancel();
-      _characeristicStream = _notifChar.value.listen((List<int> event) async {
-        if (event.isNotEmpty && utf8.decode(event) == 'R') {
-          // Read characteristics...
-          String dataCollector = '';
-
-          try {
-            final characteristic = await _getCharacteristic(_readCharUuid, toDeviceId);
-            while (true) {
-              final chunk = await characteristic.read();
-              dataCollector += utf8.decode(chunk);
-
-              if (chunk.isEmpty || dataCollector.endsWith(_eof)) {
-                _processMessage(device.id.id, dataCollector.replaceAll(_eof, ''));
-                break;
-              }
-            }
-          } catch (ex) {
-            // TODO
+      StreamSubscription<int>? _mtuSub;
+      if (Platform.isAndroid) {
+        _mtuSub = device.mtu.listen((newMtu) {
+          mtuSize = newMtu;
+          if (mtuSize == 512) {
+            setupNotifyAndListenCharacteristic(toDeviceId, device);
+            _mtuSub?.cancel();
           }
-        }
-      });
-
-      onDeviceConnected(ConnectedDevice(deviceId: toDeviceId, provider: Provider.gatt));
+        }, onError: (e) {
+          setupNotifyAndListenCharacteristic(toDeviceId, device);
+        });
+        await device.requestMtu(512);
+      } else {
+        setupNotifyAndListenCharacteristic(toDeviceId, device);
+      }
     }
+  }
+
+  Future<void> setupNotifyAndListenCharacteristic(String toDeviceId, BluetoothDevice device) async {
+    await device.discoverServices();
+
+    final _notifChar = await _getCharacteristic(_notifCharUuid, toDeviceId);
+    await _notifChar.setNotifyValue(true);
+
+    await _characeristicStream?.cancel();
+    _characeristicStream = _notifChar.value.listen((List<int> event) async {
+      if (event.isNotEmpty && utf8.decode(event) == 'R') {
+        // Read characteristics...
+        String dataCollector = '';
+
+        try {
+          final characteristic = await _getCharacteristic(_readCharUuid, toDeviceId);
+          while (true) {
+            final chunk = await characteristic.read();
+            dataCollector += utf8.decode(chunk);
+
+            if (chunk.isEmpty || dataCollector.endsWith(_eof)) {
+              _processMessage(device.id.id, dataCollector.replaceAll(_eof, ''));
+              break;
+            }
+          }
+        } catch (ex) {
+          // TODO
+        }
+      }
+    });
+
+    onDeviceConnected(ConnectedDevice(deviceId: toDeviceId, provider: Provider.gatt));
   }
 
   @override
@@ -354,6 +375,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       final connectedDevice = (await _flutterBlue.connectedDevices).firstWhere((element) => element.id.id == toDeviceId);
       await _characeristicStream?.cancel();
       await connectedDevice.disconnect();
+      mtuSize = null;
       onDeviceDisconnected(ConnectedDevice(deviceId: toDeviceId, provider: Provider.gatt));
     }
   }
@@ -400,7 +422,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       await _commApi.sendMessage(toDeviceId, endpoint, payload);
     } else {
       final device = _scannedDevices[toDeviceId]!;
-      final mtu = await device.mtu.first;
+      final mtu = mtuSize ?? await device.mtu.first;
       final request = jsonEncode(DataPayloadModel(endpoint: endpoint, data: payload).toJson());
       await _writeWithEof(request, mtu, toDeviceId);
     }
