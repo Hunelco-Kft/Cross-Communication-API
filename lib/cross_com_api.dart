@@ -316,7 +316,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
       final device = _scannedDevices[toDeviceId];
 
-      await device!.connect(autoConnect: false).timeout(const Duration(seconds: 10));
+      await device!.connect(autoConnect: false, timeout: const Duration(seconds: 10)).timeout(const Duration(seconds: 10));
 
       StreamSubscription<int>? _mtuSub;
       if (Platform.isAndroid) {
