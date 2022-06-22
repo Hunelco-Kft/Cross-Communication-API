@@ -46,7 +46,7 @@ abstract class ServerApi {
   @async
   int startServer(Config config);
 
-  void stopServer();
+  void stopServerSync();
 }
 
 @HostApi()
@@ -84,10 +84,10 @@ abstract class DeviceVerificationCallbackApi {
 @HostApi()
 abstract class DiscoveryApi {
   @async
-  int startDiscovery();
+  int startDiscoveryAsync();
 
   @async
-  int stopDiscovery();
+  int stopDiscoveryAsync();
 }
 
 @FlutterApi()
@@ -106,7 +106,7 @@ abstract class AdvertiseApi {
   int stopAdvertise();
 
   @async
-  int reset();
+  int resetAsync();
 }
 
 @HostApi()

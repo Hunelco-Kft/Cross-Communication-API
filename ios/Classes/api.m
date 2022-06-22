@@ -247,14 +247,14 @@ void FLTServerApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTS
   {
     FlutterBasicMessageChannel *channel =
       [[FlutterBasicMessageChannel alloc]
-        initWithName:@"dev.flutter.pigeon.ServerApi.stopServer"
+        initWithName:@"dev.flutter.pigeon.ServerApi.stopServerSync"
         binaryMessenger:binaryMessenger
         codec:FLTServerApiGetCodec()        ];
     if (api) {
-      NSCAssert([api respondsToSelector:@selector(stopServerWithError:)], @"FLTServerApi api (%@) doesn't respond to @selector(stopServerWithError:)", api);
+      NSCAssert([api respondsToSelector:@selector(stopServerSyncWithError:)], @"FLTServerApi api (%@) doesn't respond to @selector(stopServerSyncWithError:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
         FlutterError *error;
-        [api stopServerWithError:&error];
+        [api stopServerSyncWithError:&error];
         callback(wrapResult(nil, error));
       }];
     }
@@ -717,13 +717,13 @@ void FLTDiscoveryApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<F
   {
     FlutterBasicMessageChannel *channel =
       [[FlutterBasicMessageChannel alloc]
-        initWithName:@"dev.flutter.pigeon.DiscoveryApi.startDiscovery"
+        initWithName:@"dev.flutter.pigeon.DiscoveryApi.startDiscoveryAsync"
         binaryMessenger:binaryMessenger
         codec:FLTDiscoveryApiGetCodec()        ];
     if (api) {
-      NSCAssert([api respondsToSelector:@selector(startDiscoveryWithCompletion:)], @"FLTDiscoveryApi api (%@) doesn't respond to @selector(startDiscoveryWithCompletion:)", api);
+      NSCAssert([api respondsToSelector:@selector(startDiscoveryAsyncWithCompletion:)], @"FLTDiscoveryApi api (%@) doesn't respond to @selector(startDiscoveryAsyncWithCompletion:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        [api startDiscoveryWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+        [api startDiscoveryAsyncWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
           callback(wrapResult(output, error));
         }];
       }];
@@ -735,13 +735,13 @@ void FLTDiscoveryApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<F
   {
     FlutterBasicMessageChannel *channel =
       [[FlutterBasicMessageChannel alloc]
-        initWithName:@"dev.flutter.pigeon.DiscoveryApi.stopDiscovery"
+        initWithName:@"dev.flutter.pigeon.DiscoveryApi.stopDiscoveryAsync"
         binaryMessenger:binaryMessenger
         codec:FLTDiscoveryApiGetCodec()        ];
     if (api) {
-      NSCAssert([api respondsToSelector:@selector(stopDiscoveryWithCompletion:)], @"FLTDiscoveryApi api (%@) doesn't respond to @selector(stopDiscoveryWithCompletion:)", api);
+      NSCAssert([api respondsToSelector:@selector(stopDiscoveryAsyncWithCompletion:)], @"FLTDiscoveryApi api (%@) doesn't respond to @selector(stopDiscoveryAsyncWithCompletion:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        [api stopDiscoveryWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+        [api stopDiscoveryAsyncWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
           callback(wrapResult(output, error));
         }];
       }];
@@ -891,13 +891,13 @@ void FLTAdvertiseApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<F
   {
     FlutterBasicMessageChannel *channel =
       [[FlutterBasicMessageChannel alloc]
-        initWithName:@"dev.flutter.pigeon.AdvertiseApi.reset"
+        initWithName:@"dev.flutter.pigeon.AdvertiseApi.resetAsync"
         binaryMessenger:binaryMessenger
         codec:FLTAdvertiseApiGetCodec()        ];
     if (api) {
-      NSCAssert([api respondsToSelector:@selector(resetWithCompletion:)], @"FLTAdvertiseApi api (%@) doesn't respond to @selector(resetWithCompletion:)", api);
+      NSCAssert([api respondsToSelector:@selector(resetAsyncWithCompletion:)], @"FLTAdvertiseApi api (%@) doesn't respond to @selector(resetAsyncWithCompletion:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        [api resetWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
+        [api resetAsyncWithCompletion:^(NSNumber *_Nullable output, FlutterError *_Nullable error) {
           callback(wrapResult(output, error));
         }];
       }];

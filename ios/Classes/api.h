@@ -75,7 +75,7 @@ NSObject<FlutterMessageCodec> *FLTServerApiGetCodec(void);
 
 @protocol FLTServerApi
 - (void)startServerConfig:(FLTConfig *)config completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
-- (void)stopServerWithError:(FlutterError *_Nullable *_Nonnull)error;
+- (void)stopServerSyncWithError:(FlutterError *_Nullable *_Nonnull)error;
 @end
 
 extern void FLTServerApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTServerApi> *_Nullable api);
@@ -127,8 +127,8 @@ NSObject<FlutterMessageCodec> *FLTDeviceVerificationCallbackApiGetCodec(void);
 NSObject<FlutterMessageCodec> *FLTDiscoveryApiGetCodec(void);
 
 @protocol FLTDiscoveryApi
-- (void)startDiscoveryWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
-- (void)stopDiscoveryWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
+- (void)startDiscoveryAsyncWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
+- (void)stopDiscoveryAsyncWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 @end
 
 extern void FLTDiscoveryApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTDiscoveryApi> *_Nullable api);
@@ -147,7 +147,7 @@ NSObject<FlutterMessageCodec> *FLTAdvertiseApiGetCodec(void);
 @protocol FLTAdvertiseApi
 - (void)startAdvertiseVerificationCode:(NSString *)verificationCode completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 - (void)stopAdvertiseWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
-- (void)resetWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
+- (void)resetAsyncWithCompletion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 @end
 
 extern void FLTAdvertiseApiSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<FLTAdvertiseApi> *_Nullable api);
