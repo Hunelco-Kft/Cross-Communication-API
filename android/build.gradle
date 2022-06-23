@@ -4,18 +4,24 @@ version '1.0-SNAPSHOT'
 buildscript {
     ext.kotlin_version = '1.6.10'
     repositories {
-        google()
         mavenCentral()
+        maven {
+            url 'https://maven.google.com/'
+            name 'Google'
+        }
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.0'
+        classpath 'com.android.tools.build:gradle:4.2.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
 rootProject.allprojects {
     repositories {
+        maven {
+            url 'https://maven.google.com'
+        }
         google()
         mavenCentral()
     }
@@ -53,10 +59,10 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:5.0.1'
 
     // Nearby
-    api 'com.google.android.gms:play-services-nearby:18.2.0'
+    api 'com.google.android.gms:play-services-nearby:18.0.1'
 
     // Location Services
-    implementation 'com.google.android.gms:play-services-location:19.0.1'
+    implementation 'com.google.android.gms:play-services-location:20.0.0'
 
     // Gson
     implementation 'com.google.code.gson:gson:2.8.9'

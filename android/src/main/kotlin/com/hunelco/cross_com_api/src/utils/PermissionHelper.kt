@@ -14,7 +14,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.LocationSettingsStatusCodes
 import io.flutter.plugin.common.PluginRegistry
-import io.flutter.plugin.common.MethodChannel.Result
+import timber.log.Timber
 
 const val LOCATION_ENABLE_REQUEST = 100
 const val REQUEST_LOCATION_PERMISSION = 1000
@@ -40,11 +40,17 @@ class PermissionHelper(private val activity: Activity, val fileTransferEnabled: 
         return true
     }
 
-    fun requestAllPermissions() = ActivityCompat.requestPermissions(
-        activity,
-        requiredPermissions,
-        REQUEST_LOCATION_PERMISSION
-    )
+    fun requestAllPermissions() {
+        if (Build.VERSION.SDK_INT < 23) {
+            ActivityCompat.requestPermissions(
+                activity,
+                requiredPermissions,
+                REQUEST_LOCATION_PERMISSION
+            )
+        } else {
+            activity.requestPermissions(requiredPermissions, REQUEST_LOCATION_PERMISSION)
+        }
+    }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
         return if (requestCode == LOCATION_ENABLE_REQUEST) {
@@ -87,24 +93,33 @@ class PermissionHelper(private val activity: Activity, val fileTransferEnabled: 
     }
 
     private fun getRequiredPermissions(): Array<String> {
-        return mutableListOf<String>().apply {
-            add(Manifest.permission.ACCESS_WIFI_STATE)
-            add(Manifest.permission.CHANGE_WIFI_STATE)
-            add(Manifest.permission.ACCESS_COARSE_LOCATION)
-            add(Manifest.permission.ACCESS_FINE_LOCATION)
-            if (fileTransferEnabled) {
-                add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                add(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                add(Manifest.permission.BLUETOOTH_ADVERTISE)
-                add(Manifest.permission.BLUETOOTH_SCAN)
-                add(Manifest.permission.BLUETOOTH_CONNECT)
-                add(Manifest.permission.BLUETOOTH)
-            } else {
-                add(Manifest.permission.BLUETOOTH)
-                add(Manifest.permission.BLUETOOTH_ADMIN)
-            }
-        }.toTypedArray()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_ADVERTISE,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_WIFI_STATE,
+                Manifest.permission.CHANGE_WIFI_STATE,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return arrayOf(
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.ACCESS_WIFI_STATE,
+                Manifest.permission.CHANGE_WIFI_STATE,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        } else {
+            return arrayOf(
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.ACCESS_WIFI_STATE,
+                Manifest.permission.CHANGE_WIFI_STATE,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        }
     }
 }

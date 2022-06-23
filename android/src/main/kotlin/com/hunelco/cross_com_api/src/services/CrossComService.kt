@@ -197,7 +197,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         }
     }
 
-    override fun reset(result: Pigeon.Result<Long>?) {
+    override fun resetAsync(result: Pigeon.Result<Long>?) {
         // TODO
         stopAdvertise(result)
     }
@@ -230,7 +230,6 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
         data: String,
         result: Pigeon.Result<Long>?
     ) {
-        Timber.d("VERIFIED DEVICE ${sessionManager.verifiedDevice.value}")
         val verifiedDeviceId = sessionManager.verifiedDevice.value?.id
             ?: return result?.error(NoVerifiedDeviceFoundException()) ?: Unit
         return sendMessage(verifiedDeviceId, endpoint, data, result)

@@ -13,6 +13,7 @@ import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.BinaryMessenger
 import com.flutter.pigeon.Pigeon
+import io.flutter.BuildConfig
 import timber.log.Timber
 import kotlin.system.exitProcess
 
@@ -101,15 +102,15 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon
         }
 
         val activity = binding!!.activity
-        stopServer()
+        stopServerSync()
 
         if (crossComClient == null) {
             crossComClient = CrossComClient(activity, config)
         }
-        crossComClient!!.updateBinaryMessenger(binaryMessenger!!)
+        crossComClient!!.updateBinaryMessenger(binaryMessenger!!, true)
     }
 
-    override fun stopServer() {
+    override fun stopServerSync() {
         binding?.activity?.let { activity ->
             activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             activity.stopService(intent)

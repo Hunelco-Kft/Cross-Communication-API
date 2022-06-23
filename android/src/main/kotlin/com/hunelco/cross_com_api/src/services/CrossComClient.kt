@@ -31,7 +31,7 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
         client.config = config
     }
 
-    override fun startDiscovery(result: Pigeon.Result<Long>) {
+    override fun startDiscoveryAsync(result: Pigeon.Result<Long>) {
         if (isDiscovering.get()) return result.success(0)
 
         coroutineScope.launch {
@@ -45,7 +45,7 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
         }
     }
 
-    override fun stopDiscovery(result: Pigeon.Result<Long>) {
+    override fun stopDiscoveryAsync(result: Pigeon.Result<Long>) {
         if (!isDiscovering.get()) return result.success(0)
 
         coroutineScope.launch {
@@ -119,7 +119,9 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
         }
     }
 
-    fun updateBinaryMessenger(messenger: BinaryMessenger) {
+    fun updateBinaryMessenger(messenger: BinaryMessenger, reset: Boolean = false) {
+        if (reset) sessionManager.setVerifiedDevice(null)
+
         client.updateBinaryMessenger(messenger)
         Pigeon.DiscoveryApi.setup(messenger, this@CrossComClient)
         Pigeon.CommunicationApi.setup(messenger, this@CrossComClient)
