@@ -249,6 +249,7 @@ class CrossComService : Service(), Pigeon.CommunicationApi, Pigeon.AdvertiseApi 
                     sessionManager.updateBinaryMessenger(binaryMessenger)
                     stateCallbackApi = Pigeon.StateCallbackApi(binaryMessenger)
 
+                    nearbyManager!!.updateBinaryMessenger(binaryMessenger)
                     Pigeon.CommunicationApi.setup(binaryMessenger, this@CrossComService)
                     Pigeon.AdvertiseApi.setup(binaryMessenger, this@CrossComService)
                     result?.success(0)

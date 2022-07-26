@@ -6,7 +6,6 @@ import 'dart:io';
 import 'package:cross_com_api/api.dart';
 import 'package:cross_com_api/models/data_payload_model.dart';
 import 'package:cross_com_api/models/verification_body.dart';
-import 'package:cross_com_api/utils/device_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
