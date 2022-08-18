@@ -107,6 +107,14 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
     return _onSignallerStateStreamController.stream;
   }
 
+  Stream<bool> get onBluetoothChange {
+    final _bluetoothChangeController = StreamController<bool>.broadcast();
+    FlutterBluePlus.instance.state.listen((event) {
+      _bluetoothChangeController.add(event == BluetoothState.on || event == BluetoothState.turningOn);
+    });
+    return _bluetoothChangeController.stream;
+  }
+
   final _onDeviceVerifiedStreamController = StreamController<VerifiedDevice>.broadcast();
   Stream<VerifiedDevice> get onVerifiedDevice {
     return _onDeviceVerifiedStreamController.stream;
