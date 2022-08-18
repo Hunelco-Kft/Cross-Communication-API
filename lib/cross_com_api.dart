@@ -102,7 +102,7 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
     return _onRawMessageStreamController.stream;
   }
 
-  final _onSignallerStateStreamController = StreamController<SignallerStateEvent>();
+  final _onSignallerStateStreamController = StreamController<SignallerStateEvent>.broadcast();
   Stream<SignallerStateEvent> get onSignallerState {
     return _onSignallerStateStreamController.stream;
   }
