@@ -59,7 +59,7 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:5.0.1'
 
     // Nearby
-    api 'com.google.android.gms:play-services-nearby:18.0.1'
+    api 'com.google.android.gms:play-services-nearby:18.3.0'
 
     // Location Services
     implementation 'com.google.android.gms:play-services-location:20.0.0'

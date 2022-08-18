@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:cross_com_api/api.dart';
@@ -10,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 enum DeviceStatus { none, connecting, connected, disconnected }
+
+enum CommunicationMode { ble, nearby, auto }
 
 class DeviceInfo {
   String id;
@@ -73,6 +74,11 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   final _writeCharUuid = Guid("00002222-0000-1000-8000-00805F9B34FC");
   final _eof = '<<<EOF>>>';
   final _endpointVerifyDevice = '/verifyDevice';
+
+  Future<bool> get bluetoothTurnedOn async {
+    final state = await _flutterBlue.state.first;
+    return state == BluetoothState.on || state == BluetoothState.turningOn;
+  }
 
   final _onDeviceStateStreamController = StreamController<DeviceStateEvent>.broadcast();
   Stream<DeviceStateEvent> get onDeviceStateStream {
@@ -249,7 +255,7 @@ class CrossComServerApi extends BaseApi {
 class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   static final CrossComClientApi _instance = CrossComClientApi._internal();
 
-  int? mtuSize;
+  int _mtuSize = 23;
 
   factory CrossComClientApi() {
     DiscoveryCallbackApi.setup(_instance, binaryMessenger: BaseApi._channel.binaryMessenger);
@@ -274,14 +280,26 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   StreamSubscription<List<ScanResult>>? _scanStream;
   final Map<String, BluetoothDevice> _scannedDevices = {};
   StreamSubscription<List<int>>? _characeristicStream;
+  StreamSubscription<int>? _mtuSizeStream;
 
-  Future<void> startClient(
-      {required String name, bool allowMultipleVerifiedDevice = false, NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint}) async {
+  CommunicationMode _mode = CommunicationMode.auto;
+
+  Future<void> startClient({
+    required String name,
+    bool allowMultipleVerifiedDevice = false,
+    NearbyStrategy strategy = NearbyStrategy.p2pPointToPoint,
+    CommunicationMode mode = CommunicationMode.auto,
+  }) async {
     if (BaseApi._broadcastType != BroadcastType.none) {
       throw Exception("The client is in a bad state ${BaseApi._broadcastType}");
     }
 
-    if (Platform.isAndroid) {
+    if (mode == CommunicationMode.nearby && Platform.isIOS) {
+      throw Exception('Communication mode ($mode) is not supported on iOS');
+    }
+    _mode = mode;
+
+    if (_mode != CommunicationMode.ble) {
       final config = Config(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
       await _api.startClient(config);
     }
@@ -298,15 +316,16 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
     await _characeristicStream?.cancel();
 
-    _scanStream?.cancel();
+    await _scanStream?.cancel();
     _connectedDevices.clear();
+    await _mtuSizeStream?.cancel();
 
     BaseApi._broadcastType = BroadcastType.none;
   }
 
   @override
   Future<void> connect(String toDeviceId, String displayName) async {
-    if (Platform.isAndroid) {
+    if (_mode != CommunicationMode.ble) {
       return super.connect(toDeviceId, displayName);
     } else {
       if (await _flutterBlue.isScanning.first) {
@@ -316,22 +335,16 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       final device = _scannedDevices[toDeviceId];
 
       await device!.connect(autoConnect: false, timeout: const Duration(seconds: 10)).timeout(const Duration(seconds: 10));
+      _mtuSize = await device.mtu.first;
 
-      StreamSubscription<int>? _mtuSub;
+      _mtuSizeStream = device.mtu.listen((newMtu) {
+        _mtuSize = newMtu;
+      });
+
       if (Platform.isAndroid) {
-        _mtuSub = device.mtu.listen((newMtu) {
-          mtuSize = newMtu;
-          if (mtuSize == 512) {
-            setupNotifyAndListenCharacteristic(toDeviceId, device);
-            _mtuSub?.cancel();
-          }
-        }, onError: (e) {
-          setupNotifyAndListenCharacteristic(toDeviceId, device);
-        });
-        await device.requestMtu(512);
-      } else {
-        setupNotifyAndListenCharacteristic(toDeviceId, device);
+        device.requestMtu(512);
       }
+      setupNotifyAndListenCharacteristic(toDeviceId, device);
     }
   }
 
@@ -369,13 +382,15 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
   @override
   Future<void> disconnect(String toDeviceId) async {
-    if (Platform.isAndroid) {
+    if (_mode != CommunicationMode.ble) {
       return super.disconnect(toDeviceId);
     } else {
       final connectedDevice = (await _flutterBlue.connectedDevices).firstWhere((element) => element.id.id == toDeviceId);
       await _characeristicStream?.cancel();
       await connectedDevice.disconnect();
-      mtuSize = null;
+      await _mtuSizeStream?.cancel();
+
+      _mtuSize = 23;
       onDeviceDisconnected(ConnectedDevice(deviceId: toDeviceId, provider: Provider.gatt));
     }
   }
@@ -383,7 +398,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   Future<void> startDiscovery({Duration duration = const Duration(minutes: 10)}) async {
     if (_isDiscovering) return;
 
-    if (Platform.isAndroid) {
+    if (_mode != CommunicationMode.ble) {
       await _discoveryApi.startDiscoveryAsync();
     } else {
       _scannedDevices.clear();
@@ -396,7 +411,6 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       // Az új feliratkozók mindig megkapják legelsőnek a kezdetleges/legutolsó állapotot és csak utána kapják az események
       bool ignoreFirst = true;
       _scanStream = _flutterBlue.scanResults.listen((scanResult) {
-        log('result: $scanResult');
         if (!ignoreFirst) {
           for (ScanResult r in scanResult) {
             _scannedDevices[r.device.id.id] = r.device;
@@ -414,7 +428,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   Future<void> stopDiscovery() async {
     if (!_isDiscovering) return;
 
-    if (Platform.isAndroid) {
+    if (_mode != CommunicationMode.ble) {
       await _discoveryApi.stopDiscoveryAsync();
     } else {
       await _flutterBlue.stopScan();
@@ -426,19 +440,18 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
   @override
   Future<void> sendMessage(String toDeviceId, String endpoint, String payload) async {
-    if (Platform.isAndroid) {
+    if (_mode != CommunicationMode.ble) {
       await _commApi.sendMessage(toDeviceId, endpoint, payload);
     } else {
       final device = _scannedDevices[toDeviceId]!;
-      final mtu = mtuSize ?? await device.mtu.first;
       final request = jsonEncode(DataPayloadModel(endpoint: endpoint, data: payload).toJson());
-      await _writeWithEof(request, mtu, toDeviceId);
+      await _writeWithEof(request, toDeviceId);
     }
   }
 
   @override
   Future<void> sendMessageToVerifiedDevice(String endpoint, String data) async {
-    if (Platform.isAndroid) {
+    if (_mode != CommunicationMode.ble) {
       await _commApi.sendMessageToVerifiedDevice(endpoint, data);
     } else {
       if (_verifiedDevice == null) {
@@ -451,7 +464,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
   @override
   Future<Map<String?, String?>> requestDeviceVerification(String toDevice, String code, Map<String, String> args) async {
-    if (Platform.isAndroid) {
+    if (_mode != CommunicationMode.ble) {
       return super.requestDeviceVerification(toDevice, code, args);
     } else {
       final verificationRequest = VerificationBody(code: code, args: args);
@@ -471,12 +484,12 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     // Nothing todo here...
   }
 
-  Future<void> _writeWithEof(String text, int mtu, String toDeviceId) async {
+  Future<void> _writeWithEof(String text, String toDeviceId) async {
     final writeChar = await _getCharacteristic(_writeCharUuid, toDeviceId);
 
     List<int> encodedList = utf8.encode('$text$_eof').toList(growable: true);
     while (encodedList.isNotEmpty) {
-      List<int> subList = encodedList.getRange(0, encodedList.length > mtu ? mtu : encodedList.length).toList();
+      List<int> subList = encodedList.getRange(0, encodedList.length > _mtuSize ? _mtuSize : encodedList.length).toList();
       encodedList.removeRange(0, subList.length);
       int successWriteCount = 0;
       while (successWriteCount != 3) {
@@ -484,7 +497,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
           await writeChar.write(subList, withoutResponse: false);
           break;
         } catch (e, stack) {
-          print('write error: $e\n$stack');
+          // TODO
         }
         successWriteCount++;
         if (successWriteCount == 3) {
