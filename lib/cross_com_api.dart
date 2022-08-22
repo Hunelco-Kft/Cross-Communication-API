@@ -305,7 +305,12 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     if (mode == CommunicationMode.nearby && Platform.isIOS) {
       throw Exception('Communication mode ($mode) is not supported on iOS');
     }
-    _mode = mode;
+
+    if (Platform.isIOS) {
+      _mode = CommunicationMode.ble;
+    } else {
+      _mode = mode;
+    }
 
     if (_mode != CommunicationMode.ble) {
       final config = Config(name: name, allowMultipleVerifiedDevice: allowMultipleVerifiedDevice, strategy: strategy);
