@@ -2,14 +2,16 @@ package com.hunelco.cross_com_api.src.managers.ble
 
 import android.annotation.SuppressLint
 import android.bluetooth.*
-import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+import android.bluetooth.le.AdvertiseData
+import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
+import android.os.ParcelUuid
+import com.flutter.pigeon.Pigeon
 import com.hunelco.cross_com_api.src.managers.DeviceNotFoundException
 import com.hunelco.cross_com_api.src.managers.SessionManager
 import com.hunelco.cross_com_api.src.managers.ble.profiles.GeneralProfile
 import com.hunelco.cross_com_api.src.models.BleDevice
 import com.hunelco.cross_com_api.src.utils.MessageUtils
-import com.flutter.pigeon.Pigeon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -17,12 +19,13 @@ import kotlinx.coroutines.launch
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.BleServerManager
 import no.nordicsemi.android.ble.ConnectionPriorityRequest
-import no.nordicsemi.android.ble.MtuRequest
 import no.nordicsemi.android.ble.observer.ServerObserver
 import timber.log.Timber
+import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+
 
 /*
  * Manages the entire GATT service, declaring the services and characteristics on offer

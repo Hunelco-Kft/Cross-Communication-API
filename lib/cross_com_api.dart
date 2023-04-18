@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:cross_com_api/api.dart';
@@ -272,11 +273,6 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
   CrossComClientApi._internal();
 
-  bool _isDiscovering = false;
-  get isDiscovering {
-    return _isDiscovering;
-  }
-
   final _onDeviceDiscoveredStreamController = StreamController<DeviceInfo>.broadcast();
   Stream<DeviceInfo> get onDeviceDiscover {
     return _onDeviceDiscoveredStreamController.stream;
@@ -409,7 +405,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
   }
 
   Future<void> startDiscovery({Duration duration = const Duration(minutes: 10)}) async {
-    if (_isDiscovering) return;
+    await stopDiscovery();
 
     if (_mode != CommunicationMode.ble) {
       await _discoveryApi.startDiscoveryAsync();
@@ -435,20 +431,19 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       });
       _flutterBlue.startScan(scanMode: ScanMode.lowLatency, allowDuplicates: true, withServices: [_serviceUuid], timeout: duration);
     }
-    _isDiscovering = true;
   }
 
   Future<void> stopDiscovery() async {
-    if (!_isDiscovering) return;
-
-    if (_mode != CommunicationMode.ble) {
-      await _discoveryApi.stopDiscoveryAsync();
-    } else {
-      await _flutterBlue.stopScan();
-      _scannedDevices.clear();
+    try {
+      if (_mode != CommunicationMode.ble) {
+        await _discoveryApi.stopDiscoveryAsync();
+      } else {
+        await _flutterBlue.stopScan();
+        _scannedDevices.clear();
+      }
+    } catch (e) {
+      log('stopDiscovery: e');
     }
-
-    _isDiscovering = false;
   }
 
   @override

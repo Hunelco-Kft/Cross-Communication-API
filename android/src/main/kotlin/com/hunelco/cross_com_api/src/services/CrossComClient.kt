@@ -10,6 +10,7 @@ import com.hunelco.cross_com_api.src.models.VerificationRequest
 import com.hunelco.cross_com_api.src.models.VerificationResponse
 import io.flutter.plugin.common.BinaryMessenger
 import com.flutter.pigeon.Pigeon
+import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.*
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
@@ -21,8 +22,6 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
     private val gson = Gson()
     private val sessionManager = SessionManager.getInstance()
 
-    private val isDiscovering = AtomicBoolean(false)
-
     //Coroutine Job and Coroutine Scope
     private val coroutineJob = Job()
     private val coroutineScope = CoroutineScope(Dispatchers.IO + coroutineJob)
@@ -32,12 +31,28 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
     }
 
     override fun startDiscoveryAsync(result: Pigeon.Result<Long>) {
-        if (isDiscovering.get()) return result.success(0)
-
         coroutineScope.launch {
             try {
                 client.startDiscovery()
-                isDiscovering.set(true)
+                result.success(0)
+            } catch (ex: Exception) {
+                result.error(ex)
+                /*
+                Timber.i("startDiscoveryAsync - Android - e: ${ex.javaClass.canonicalName}")
+                if(ex is ApiException && ex.statusCode == 8002){
+                    restartDiscoveryAsync(result)
+                } else {
+                    result.error(ex)
+                }
+                 */
+            }
+        }
+    }
+
+    override fun stopDiscoveryAsync(result: Pigeon.Result<Long>) {
+        coroutineScope.launch {
+            try {
+                client.stopDiscovery()
                 result.success(0)
             } catch (ex: Exception) {
                 result.error(ex)
@@ -45,16 +60,13 @@ class CrossComClient(context: Context, config: Pigeon.Config) :
         }
     }
 
-    override fun stopDiscoveryAsync(result: Pigeon.Result<Long>) {
-        if (!isDiscovering.get()) return result.success(0)
-
+    private fun restartDiscoveryAsync(result: Pigeon.Result<Long>) {
         coroutineScope.launch {
             try {
                 client.stopDiscovery()
-                isDiscovering.set(false)
-                result.success(0)
+                startDiscoveryAsync(result)
             } catch (ex: Exception) {
-                result.error(ex)
+                Timber.i("stopDiscoveryAsync - Android - e: ${ex}")
             }
         }
     }

@@ -23,7 +23,6 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
     protected val connectionsClient = Nearby.getConnectionsClient(context)
 
     private val internalDevices = mutableListOf<NearbyDevice>()
-    private val isDiscovering = AtomicBoolean(false)
 
     protected val connectionCallback = object : ConnectionLifecycleCallback() {
         override fun onConnectionInitiated(endpointId: String, connectionInfo: ConnectionInfo) {
@@ -112,8 +111,6 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
     }
 
     suspend fun startDiscovery() {
-        if (isDiscovering.get()) return
-
         val settings = DiscoveryOptions.Builder()
             .setStrategy(getStrategy(config.strategy!!))
             .build()
@@ -123,23 +120,18 @@ open class NearbyClientManager(context: Context) : Pigeon.ConnectionApi {
                 .startDiscovery(GeneralNearbyProfile.SERVICE_ID, discoveryCallback, settings)
                 .addOnSuccessListener {
                     Timber.i("Nearby discovery started successfully.")
-                    isDiscovering.set(true)
                     continuation.resume(Unit)
                 }
                 .addOnFailureListener {
                     Timber.e("Nearby discovery start failed.")
-                    isDiscovering.set(false)
                     continuation.resumeWithException(it)
                 }
         }
     }
 
     fun stopDiscovery() {
-        if (!isDiscovering.get()) return
-
         connectionsClient.stopDiscovery()
         connectionsClient.stopAllEndpoints()
-        isDiscovering.set(false)
     }
 
     suspend fun sendMessage(deviceId: String, data: String) {

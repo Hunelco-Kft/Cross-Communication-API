@@ -2,7 +2,7 @@ group 'com.hunelco.cross_com_api'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.6.10'
+    ext.kotlin_version = '1.8.0'
     repositories {
         mavenCentral()
         maven {
@@ -59,14 +59,14 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:5.0.1'
 
     // Nearby
-    api 'com.google.android.gms:play-services-nearby:18.3.0'
+    api 'com.google.android.gms:play-services-nearby:18.4.0'
 
     // Location Services
-    implementation 'com.google.android.gms:play-services-location:20.0.0'
+    implementation 'com.google.android.gms:play-services-location:21.0.1'
 
     // Gson
     implementation 'com.google.code.gson:gson:2.8.9'
 
     // Nordic Semiconductor BLE
-    implementation 'no.nordicsemi.android:ble-ktx:2.4.0'
+    implementation 'no.nordicsemi.android:ble-ktx:2.6.0'
 }

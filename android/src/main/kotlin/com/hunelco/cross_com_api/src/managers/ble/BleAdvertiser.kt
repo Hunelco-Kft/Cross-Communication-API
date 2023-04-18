@@ -17,7 +17,7 @@ object BleAdvertiser {
     class Callback(private val context: Context, var continuation: Continuation<Unit>?) :
         AdvertiseCallback() {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
-            Timber.i("LE Advertise started.")
+            Timber.i("LE Advertise started.: ${settingsInEffect?.mode} ${settingsInEffect?.isConnectable}")
             continuation?.resume(Unit)
         }
 
@@ -40,7 +40,7 @@ object BleAdvertiser {
 
     fun advertiseData(serviceUUIDs: List<UUID>): AdvertiseData {
         val builder = AdvertiseData.Builder()
-            .setIncludeDeviceName(true)
+            .setIncludeDeviceName(true)//TODO false???
             .setIncludeTxPowerLevel(false)
 
         for (serviceUUID in serviceUUIDs)
