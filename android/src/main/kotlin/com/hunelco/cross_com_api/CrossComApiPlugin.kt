@@ -3,6 +3,7 @@ package com.hunelco.cross_com_api
 import android.content.Context
 import android.content.Intent
 import android.view.WindowManager
+import androidx.annotation.NonNull
 import com.hunelco.cross_com_api.src.services.CrossComClient
 import com.hunelco.cross_com_api.src.services.CrossComService
 import com.hunelco.cross_com_api.src.services.CrossComServiceConn
@@ -13,12 +14,17 @@ import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.BinaryMessenger
 import com.flutter.pigeon.Pigeon
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import io.flutter.BuildConfig
+import io.flutter.plugin.common.MethodCall
+import io.flutter.plugin.common.MethodChannel
 import timber.log.Timber
 import kotlin.system.exitProcess
 
 /** CrossComApiPlugin */
-class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon.ClientApi {
+class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon.ClientApi,
+    MethodChannel.MethodCallHandler {
     private var binding: ActivityPluginBinding? = null
     private var binaryMessenger: BinaryMessenger? = null
 
@@ -28,6 +34,7 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon
     private var crossComClient: CrossComClient? = null
 
     private lateinit var intent: Intent
+    private lateinit var channel : MethodChannel
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
@@ -35,6 +42,9 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon
         binaryMessenger = binding.binaryMessenger
         Pigeon.ServerApi.setup(binaryMessenger, this)
         Pigeon.ClientApi.setup(binaryMessenger, this)
+
+        channel = MethodChannel(binaryMessenger!!, "cross_com")
+        channel.setMethodCallHandler(this)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -117,5 +127,18 @@ class CrossComApiPlugin : FlutterPlugin, ActivityAware, Pigeon.ServerApi, Pigeon
         }
 
         serviceConnection = null
+    }
+
+    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: MethodChannel.Result) {
+        if (call.method == "googleServicesIsAvailable") {
+            try {
+                result.success(
+                    GoogleApiAvailability.getInstance()
+                        .isGooglePlayServicesAvailable(binding!!.activity.applicationContext) == ConnectionResult.SUCCESS
+                )
+            } catch (e: Exception){
+                result.success(false);
+            }
+        }
     }
 }

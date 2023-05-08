@@ -61,6 +61,7 @@ enum BroadcastType { none, server, client }
 
 abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, StateCallbackApi, DeviceVerificationCallbackApi {
   static const MethodChannel _channel = MethodChannel('cross_com_api', JSONMethodCodec());
+  static const MethodChannel _channel2 = MethodChannel('cross_com');
 
   static BroadcastType _broadcastType = BroadcastType.none;
   BroadcastType get broadcastType {
@@ -302,7 +303,8 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       throw Exception('Communication mode ($mode) is not supported on iOS');
     }
 
-    if (Platform.isIOS) {
+    final googleServicesIsAvailable = await BaseApi._channel2.invokeMethod('googleServicesIsAvailable');
+    if (Platform.isIOS || !googleServicesIsAvailable) {
       _mode = CommunicationMode.ble;
     } else {
       _mode = mode;
