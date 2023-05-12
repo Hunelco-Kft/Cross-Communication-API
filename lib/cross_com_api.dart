@@ -78,7 +78,14 @@ abstract class BaseApi with ConnectionCallbackApi, CommunicationCallbackApi, Sta
   final _endpointVerifyDevice = '/verifyDevice';
 
   Future<bool> get bluetoothTurnedOn async {
-    final state = await _flutterBlue.state.first;
+    Completer<BluetoothState> _complete = Completer();
+    StreamSubscription sub = _flutterBlue.state.listen((event) {
+      if (event != BluetoothState.unknown) {
+        _complete.complete(event);
+      }
+    });
+    final state = await _complete.future;
+    sub.cancel();
     return state == BluetoothState.on || state == BluetoothState.turningOn;
   }
 
