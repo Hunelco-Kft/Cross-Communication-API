@@ -310,7 +310,14 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
       throw Exception('Communication mode ($mode) is not supported on iOS');
     }
 
-    final googleServicesIsAvailable = await BaseApi._channel2.invokeMethod('googleServicesIsAvailable');
+    bool googleServicesIsAvailable = false;
+    if (Platform.isAndroid) {
+      try {
+        googleServicesIsAvailable = await BaseApi._channel2.invokeMethod('googleServicesIsAvailable');
+      } catch (e) {
+        googleServicesIsAvailable = false;
+      }
+    }
     if (Platform.isIOS || !googleServicesIsAvailable) {
       _mode = CommunicationMode.ble;
     } else {
