@@ -10,11 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_blue_plus:
-    git:
-      url: https://gitlab.com/quantumstore/flutter/flutter-blue-plus-fork.git
-      ref: unknown #BluetoothState.state.first is unknown, it hasn't fixed yet in pub.dev
-
+  flutter_blue_plus: 1.5.0
   equatable: ^2.0.3
   json_annotation: ^4.3.0
   device_info_plus: ^3.2.3

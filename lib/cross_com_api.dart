@@ -353,7 +353,7 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     if (_mode != CommunicationMode.ble) {
       return super.connect(toDeviceId, displayName);
     } else {
-      if (await _flutterBlue.isScanning.first) {
+      if (_flutterBlue.isScanningNow) {
         await _flutterBlue.stopScan();
       }
 
@@ -364,12 +364,16 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
       _mtuSizeStream = device.mtu.listen((newMtu) {
         _mtuSize = newMtu;
+        if (newMtu == 256) {
+          setupNotifyAndListenCharacteristic(toDeviceId, device);
+        }
       });
 
       if (Platform.isAndroid) {
-        device.requestMtu(512);
+        device.requestMtu(256);
+      } else {
+        setupNotifyAndListenCharacteristic(toDeviceId, device);
       }
-      setupNotifyAndListenCharacteristic(toDeviceId, device);
     }
   }
 
@@ -377,7 +381,9 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     await device.discoverServices();
 
     final _notifChar = await _getCharacteristic(_notifCharUuid, toDeviceId);
-    await _notifChar.setNotifyValue(true);
+    try {
+      await _notifChar.setNotifyValue(true);
+    } catch (e) {}
 
     await _characeristicStream?.cancel();
     _characeristicStream = _notifChar.value.listen((List<int> event) async {
