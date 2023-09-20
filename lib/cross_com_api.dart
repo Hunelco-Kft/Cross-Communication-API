@@ -348,6 +348,9 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
     BaseApi._broadcastType = BroadcastType.none;
   }
 
+  //You can change the mtu size
+  int requestedMtu = 256;
+
   @override
   Future<void> connect(String toDeviceId, String displayName) async {
     if (_mode != CommunicationMode.ble) {
@@ -364,13 +367,13 @@ class CrossComClientApi extends BaseApi with DiscoveryCallbackApi {
 
       _mtuSizeStream = device.mtu.listen((newMtu) {
         _mtuSize = newMtu;
-        if (newMtu == 256) {
+        if (newMtu == requestedMtu) {
           setupNotifyAndListenCharacteristic(toDeviceId, device);
         }
       });
 
       if (Platform.isAndroid) {
-        device.requestMtu(256);
+        device.requestMtu(requestedMtu);
       } else {
         setupNotifyAndListenCharacteristic(toDeviceId, device);
       }
